@@ -31,7 +31,7 @@ export async function GET(
   const { link } = result;
   const file = link.file;
   const tier = file.project.securityTier;
-  const caps = getClientFileCapabilities(tier, file);
+  const caps = getClientFileCapabilities(tier, file, file.project);
   const shareDownload = link.downloadAllowed || caps.canDownload;
 
   if (intent === "download" && !shareDownload) {

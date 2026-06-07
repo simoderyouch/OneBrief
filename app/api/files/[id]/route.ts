@@ -1,6 +1,6 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { deleteFile } from "@/lib/supabase";
+import { deleteFile } from "@/lib/storage";
 import { NextRequest } from "next/server";
 
 export async function PATCH(
@@ -29,9 +29,12 @@ export async function PATCH(
     data: {
       label: body.label,
       note: body.note,
-      status: body.status,
       clientVisible: body.clientVisible,
       downloadAllowed: body.downloadAllowed,
+      packageId: body.packageId,
+      approvalStatus: body.approvalStatus,
+      isFinalDeliverable: body.isFinalDeliverable,
+      status: body.status,
     },
   });
 

@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { feedbackSubmitterLabel } from "@/lib/feedback-display";
+import { clientPortalJsonHeaders, getOrCreateClientSessionId } from "@/lib/client-session";
+import { clientPortalApiBase } from "@/lib/client-portal-url";
 
 type Msg = { id: string; fromClient: boolean; body: string; createdAt: string };
 
@@ -22,12 +24,16 @@ type WR = {
 };
 
 export default function ClientWorkRequests({
-  token,
+  portalSlug,
+  portalToken,
   currency,
+  defaultDisplayName,
   initialRequests,
 }: {
-  token: string;
+  portalSlug: string;
+  portalToken: string;
   currency: string;
+  defaultDisplayName?: string;
   initialRequests: WR[];
 }) {
   const router = useRouter();
@@ -43,12 +49,15 @@ export default function ClientWorkRequests({
     e.preventDefault();
     setLoading(true);
     setError(null);
-    const res = await fetch(`/api/client/${token}/work-requests`, {
+    const sessionId = getOrCreateClientSessionId();
+    const res = await fetch(`${clientPortalApiBase(portalSlug, portalToken)}/work-requests`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: clientPortalJsonHeaders(sessionId),
       body: JSON.stringify({
         title: title.trim(),
         description: description.trim(),
+        sessionId,
+        displayName: defaultDisplayName?.trim() || undefined,
       }),
     });
     setLoading(false);
@@ -71,10 +80,12 @@ export default function ClientWorkRequests({
     if (!text) return;
     setReplying(requestId);
     setError(null);
-    const res = await fetch(`/api/client/${token}/work-requests/${requestId}/messages`, {
+    const sessionId = getOrCreateClientSessionId();
+    const api = clientPortalApiBase(portalSlug, portalToken);
+    const res = await fetch(`${api}/work-requests/${requestId}/messages`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: text }),
+      headers: clientPortalJsonHeaders(sessionId),
+      body: JSON.stringify({ message: text, sessionId }),
     });
     setReplying(null);
     if (res.ok) {
@@ -92,7 +103,8 @@ export default function ClientWorkRequests({
 
   async function accept(id: string) {
     setActing(id);
-    const res = await fetch(`/api/client/${token}/work-requests/${id}/accept`, { method: "POST" });
+    const api = clientPortalApiBase(portalSlug, portalToken);
+    const res = await fetch(`${api}/work-requests/${id}/accept`, { method: "POST" });
     setActing(null);
     if (res.ok) router.refresh();
     else {
@@ -107,7 +119,8 @@ export default function ClientWorkRequests({
 
   async function decline(id: string) {
     setActing(id);
-    const res = await fetch(`/api/client/${token}/work-requests/${id}/decline`, { method: "POST" });
+    const api = clientPortalApiBase(portalSlug, portalToken);
+    const res = await fetch(`${api}/work-requests/${id}/decline`, { method: "POST" });
     setActing(null);
     if (res.ok) router.refresh();
   }

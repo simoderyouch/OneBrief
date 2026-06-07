@@ -1,6 +1,7 @@
 import type { File, Project, SecurityTier } from "@prisma/client";
-import { fetchFileForRecord } from "@/lib/supabase";
+import { fetchFileForRecord } from "@/lib/storage";
 import {
+  buildPaymentGateContext,
   canAccessFile,
   canDownloadFile,
   needsProtectedPreview,
@@ -12,7 +13,17 @@ import { logFileAccess } from "@/lib/file-share";
 export type { FileAccessIntent } from "@/lib/file-security";
 
 type FileWithProject = File & {
-  project: Pick<Project, "id" | "securityTier" | "clientName">;
+  project: Pick<
+    Project,
+    | "id"
+    | "securityTier"
+    | "clientName"
+    | "paymentGateEnabled"
+    | "paymentGateMode"
+    | "paymentGateMilestoneId"
+  > & {
+    payments: { id: string; status: string; lineKind: string }[];
+  };
 };
 
 export function fileSecurityContext(file: File): {
@@ -21,6 +32,7 @@ export function fileSecurityContext(file: File): {
   status: File["status"];
   clientVisible: boolean;
   downloadAllowed: boolean;
+  isFinalDeliverable: boolean;
 } {
   return {
     mimeType: file.mimeType,
@@ -28,17 +40,34 @@ export function fileSecurityContext(file: File): {
     status: file.status,
     clientVisible: file.clientVisible,
     downloadAllowed: file.downloadAllowed,
+    isFinalDeliverable: file.isFinalDeliverable,
   };
 }
 
 export function getClientFileCapabilities(
   tier: SecurityTier,
-  file: File
+  file: File,
+  project?: FileWithProject["project"]
 ) {
   const ctx = fileSecurityContext(file);
+  const gate = project
+    ? buildPaymentGateContext({
+        paymentGateEnabled: project.paymentGateEnabled,
+        paymentGateMode: project.paymentGateMode as Parameters<
+          typeof buildPaymentGateContext
+        >[0]["paymentGateMode"],
+        paymentGateMilestoneId: project.paymentGateMilestoneId,
+        payments: project.payments.map((p) => ({
+          id: p.id,
+          status: p.status as "PENDING" | "PAID" | "OVERDUE" | "CANCELLED",
+          lineKind: p.lineKind as "MILESTONE" | "CHANGE_ORDER",
+        })),
+      })
+    : undefined;
+
   return {
-    canView: canAccessFile(tier, ctx, "view"),
-    canDownload: canDownloadFile(tier, ctx),
+    canView: canAccessFile(tier, ctx, "view", gate),
+    canDownload: canDownloadFile(tier, ctx, gate),
     useProtectedPreview: needsProtectedPreview(tier, ctx),
   };
 }
@@ -49,14 +78,31 @@ export async function streamFileResponse(params: {
   intent: FileAccessIntent;
   headers: Headers;
   shareLinkId?: string;
-  /** When true, skip audit log (e.g. freelancer owner access) */
   skipLog?: boolean;
+  /** Freelancer owner access — bypass payment gate */
+  skipGate?: boolean;
 }): Promise<Response> {
-  const { file, tier, intent, headers, shareLinkId, skipLog } = params;
+  const { file, tier, intent, headers, shareLinkId, skipLog, skipGate } = params;
   const ctx = fileSecurityContext(file);
+  const gate = skipGate
+    ? undefined
+    : buildPaymentGateContext({
+    paymentGateEnabled: file.project.paymentGateEnabled,
+    paymentGateMode: file.project.paymentGateMode,
+    paymentGateMilestoneId: file.project.paymentGateMilestoneId,
+    payments: file.project.payments.map((p) => ({
+      id: p.id,
+      status: p.status as "PENDING" | "PAID" | "OVERDUE" | "CANCELLED",
+      lineKind: p.lineKind as "MILESTONE" | "CHANGE_ORDER",
+    })),
+  });
 
-  if (!canAccessFile(tier, ctx, intent)) {
-    return Response.json({ error: "Access denied" }, { status: 403 });
+  if (!canAccessFile(tier, ctx, intent, gate)) {
+    const message =
+      intent === "download" && gate?.paymentGateEnabled
+        ? "Download locked until required payment is recorded"
+        : "Access denied";
+    return Response.json({ error: message }, { status: 403 });
   }
 
   if (!skipLog && tier !== "BASIC") {

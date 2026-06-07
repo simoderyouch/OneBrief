@@ -107,14 +107,14 @@ export default function WorkRequestPanel({
             <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
               <p className="font-medium text-white">{r.title}</p>
               <span
-                className={`text-[10px] uppercase px-2 py-0.5 rounded ${
+                className={`text-[10px] uppercase px-2 py-0.5 rounded badge ${
                   r.status === "PENDING"
-                    ? "bg-amber-900/40 text-amber-200"
+                    ? "badge-warn"
                     : r.status === "QUOTED"
-                      ? "bg-blue-900/40 text-blue-200"
+                      ? "badge"
                       : r.status === "ACCEPTED"
-                        ? "bg-green-900/40 text-green-200"
-                        : "bg-neutral-800 text-neutral-500"
+                        ? "badge-ok"
+                        : "text-neutral-600"
                 }`}
               >
                 {r.status === "PENDING" ? "Discussing" : r.status}

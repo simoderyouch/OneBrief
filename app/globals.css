@@ -11,3 +11,77 @@
 body {
   font-family: var(--font-inter, system-ui, sans-serif);
 }
+
+@layer components {
+  .page-shell {
+    @apply p-8 max-w-6xl;
+  }
+
+  .page-title {
+    @apply text-2xl font-bold text-white;
+  }
+
+  .page-subtitle {
+    @apply text-neutral-400 text-sm mt-1;
+  }
+
+  .panel-padded {
+    @apply bg-neutral-900 border border-neutral-800 rounded-xl p-5;
+  }
+
+  .stat-card {
+    @apply bg-neutral-900 border border-neutral-800 rounded-xl p-4;
+  }
+
+  .stat-label {
+    @apply text-[11px] uppercase tracking-wide text-neutral-500 font-medium;
+  }
+
+  .stat-value {
+    @apply text-lg font-medium tabular-nums text-neutral-200 mt-1;
+  }
+
+  .stat-value-soft {
+    @apply text-lg font-medium tabular-nums text-neutral-300 mt-1;
+  }
+
+  .badge-warn {
+    @apply inline-flex items-center text-[11px] font-medium px-2 py-0.5 rounded-md text-amber-400/90 border border-amber-900/30 bg-amber-950/20;
+  }
+
+  .badge {
+    @apply inline-flex items-center text-[11px] font-medium px-2 py-0.5 rounded-md bg-neutral-800/80 text-neutral-400 border border-neutral-700/40;
+  }
+
+  .badge-ok {
+    @apply inline-flex items-center text-[11px] font-medium px-2 py-0.5 rounded-md text-emerald-400/90 border border-emerald-900/25 bg-emerald-950/15;
+  }
+
+  .input-field {
+    @apply w-full px-3.5 py-2.5 bg-neutral-900/60 border border-neutral-800 rounded-lg text-neutral-100 placeholder-neutral-600 text-sm focus:outline-none focus:ring-1 focus:ring-neutral-600 focus:border-neutral-600 transition-colors;
+  }
+
+  .btn-primary {
+    @apply px-4 py-2 bg-neutral-100 text-neutral-900 rounded-lg text-sm font-medium hover:bg-white transition-colors disabled:opacity-50;
+  }
+
+  .text-money {
+    @apply tabular-nums text-neutral-300;
+  }
+
+  .text-money-muted {
+    @apply tabular-nums text-neutral-500;
+  }
+
+  .status-paid {
+    @apply inline-flex items-center text-[11px] font-medium px-2 py-0.5 rounded-md text-emerald-400/90 border border-emerald-900/25 bg-emerald-950/15;
+  }
+
+  .status-overdue {
+    @apply inline-flex items-center text-[11px] font-medium px-2 py-0.5 rounded-md text-neutral-500 border border-neutral-700/50 bg-neutral-800/80;
+  }
+
+  .status-pending {
+    @apply inline-flex items-center text-[11px] font-medium px-2 py-0.5 rounded-md bg-neutral-800/80 text-neutral-400 border border-neutral-700/40;
+  }
+}

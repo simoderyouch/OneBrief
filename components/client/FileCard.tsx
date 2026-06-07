@@ -1,3 +1,8 @@
+import {
+  buildClientPortalPreviewPath,
+  clientPortalApiBase,
+} from "@/lib/client-portal-url";
+
 function formatBytes(bytes: number | null): string {
   if (!bytes) return "";
   if (bytes < 1024) return `${bytes} B`;
@@ -6,7 +11,8 @@ function formatBytes(bytes: number | null): string {
 }
 
 interface FileCardProps {
-  token: string;
+  portalSlug: string;
+  portalToken: string;
   file: {
     id: string;
     label: string | null;
@@ -22,7 +28,8 @@ interface FileCardProps {
 }
 
 export default function FileCard({
-  token,
+  portalSlug,
+  portalToken,
   file,
   canDownload,
   useProtectedPreview,
@@ -32,10 +39,10 @@ export default function FileCard({
     new Date(file.uploadedAt).getTime() > Date.now() - 86400 * 1000 * 3;
 
   const viewHref = useProtectedPreview
-    ? `/p/${token}/preview/${file.id}`
-    : `/api/client/${token}/files/${file.id}?intent=view`;
+    ? buildClientPortalPreviewPath(portalSlug, portalToken, file.id)
+    : `${clientPortalApiBase(portalSlug, portalToken)}/files/${file.id}?intent=view`;
 
-  const downloadHref = `/api/client/${token}/files/${file.id}?intent=download`;
+  const downloadHref = `${clientPortalApiBase(portalSlug, portalToken)}/files/${file.id}?intent=download`;
 
   return (
     <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 flex items-start gap-4">

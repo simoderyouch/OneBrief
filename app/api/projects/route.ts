@@ -1,6 +1,7 @@
 import { getAuthenticatedUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { generateToken, hashToken } from "@/lib/token";
+import { buildClientPortalUrl } from "@/lib/client-portal-url";
 import { CLIENT_TOKEN_TTL_DAYS } from "@/lib/constants";
 import { NextRequest } from "next/server";
 
@@ -47,10 +48,18 @@ export async function POST(request: NextRequest) {
   const { user } = authResult;
 
   const body = await request.json();
-  const { title, description, serviceType, clientName, clientEmail, deadline, totalPrice, currency } = body;
+  const { title, description, serviceType, clientName, clientEmail, clientWhatsapp, deadline, totalPrice, currency, templateId } = body;
 
   if (!title) {
     return Response.json({ error: "Title is required" }, { status: 400 });
+  }
+
+  const owner = await prisma.user.findUnique({ where: { id: user.id } });
+  let template = null;
+  if (templateId) {
+    template = await prisma.projectTemplate.findFirst({
+      where: { id: templateId, userId: user.id },
+    });
   }
 
   const rawToken = generateToken();
@@ -62,18 +71,37 @@ export async function POST(request: NextRequest) {
     data: {
       userId: user.id,
       title,
-      description,
-      serviceType,
+      description: description ?? template?.description,
+      serviceType: serviceType ?? template?.serviceType,
       clientName,
       clientEmail,
+      clientWhatsapp: clientWhatsapp || undefined,
       deadline: deadline ? new Date(deadline) : undefined,
       totalPrice: totalPrice ? parseFloat(totalPrice) : undefined,
-      currency: currency || "MAD",
+      currency: currency || owner?.defaultCurrency || "MAD",
       token: hashedToken,
       tokenExpiresAt,
       tokenRevokedAt: null,
+      securityTier: template?.defaultSecurityTier ?? owner?.defaultSecurityTier ?? "PROTECTED",
+      revisionLimit: template?.defaultRevisionLimit ?? owner?.defaultRevisionLimit ?? 3,
+      scopeDocument: template?.scopeDocument,
+      briefContent: template?.briefContent,
+      paymentGateEnabled: true,
+      paymentGateMode: "DEPOSIT_PAID",
+      autoUnlockOnPayment: true,
+      startedAt: new Date(),
     },
   });
 
-  return Response.json({ ...project, clientUrl: `${process.env.NEXT_PUBLIC_APP_URL}/p/${rawToken}` }, { status: 201 });
+  return Response.json(
+    {
+      ...project,
+      clientUrl: buildClientPortalUrl(process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000", {
+        title: project.title,
+        clientName: project.clientName,
+        token: hashedToken,
+      }),
+    },
+    { status: 201 }
+  );
 }

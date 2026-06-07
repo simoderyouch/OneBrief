@@ -1,5 +1,9 @@
 import type { FileStatus, SecurityTier } from "@prisma/client";
 import { IMAGE_PREVIEW_FORMATS } from "@/lib/constants";
+import {
+  canDownloadWithPaymentGate,
+  type PaymentGateContext,
+} from "@/lib/payment-gate";
 
 export type FileAccessIntent = "view" | "download";
 
@@ -9,6 +13,7 @@ export type FileSecurityContext = {
   status: FileStatus;
   clientVisible: boolean;
   downloadAllowed: boolean;
+  isFinalDeliverable?: boolean;
 };
 
 export const SECURITY_TIER_LABELS: Record<
@@ -42,13 +47,32 @@ export function canClientSeeFile(file: FileSecurityContext): boolean {
   return file.clientVisible && file.status !== "SUPERSEDED";
 }
 
-/** Whether download is permitted for this tier + file state */
-export function canDownloadFile(
+/** Whether download is permitted for this tier + file state (before payment gate) */
+export function canDownloadFileBase(
   _tier: SecurityTier,
   file: FileSecurityContext
 ): boolean {
   if (file.downloadAllowed) return true;
   return file.status === "FINAL";
+}
+
+/** Whether download is permitted including optional payment gate */
+export function canDownloadFile(
+  tier: SecurityTier,
+  file: FileSecurityContext,
+  gate?: PaymentGateContext
+): boolean {
+  const base = canDownloadFileBase(tier, file);
+  if (!gate) return base;
+  return canDownloadWithPaymentGate({
+    gate,
+    file: {
+      downloadAllowed: file.downloadAllowed,
+      status: file.status,
+      isFinalDeliverable: file.isFinalDeliverable ?? false,
+    },
+    baseCanDownload: base,
+  });
 }
 
 /** PROTECTED tier: non-final images use watermarked preview page */
@@ -64,11 +88,12 @@ export function needsProtectedPreview(
 export function canAccessFile(
   tier: SecurityTier,
   file: FileSecurityContext,
-  intent: FileAccessIntent
+  intent: FileAccessIntent,
+  gate?: PaymentGateContext
 ): boolean {
   if (!canClientSeeFile(file)) return false;
   if (intent === "view") return true;
-  return canDownloadFile(tier, file);
+  return canDownloadFile(tier, file, gate);
 }
 
 export function sanitizeFilename(label: string | null, format: string | null): string {
@@ -77,4 +102,18 @@ export function sanitizeFilename(label: string | null, format: string | null): s
     return `${base}.${format}`;
   }
   return base;
+}
+
+export function buildPaymentGateContext(project: {
+  paymentGateEnabled: boolean;
+  paymentGateMode: PaymentGateContext["paymentGateMode"];
+  paymentGateMilestoneId: string | null;
+  payments: PaymentGateContext["payments"];
+}): PaymentGateContext {
+  return {
+    paymentGateEnabled: project.paymentGateEnabled,
+    paymentGateMode: project.paymentGateMode,
+    paymentGateMilestoneId: project.paymentGateMilestoneId,
+    payments: project.payments,
+  };
 }

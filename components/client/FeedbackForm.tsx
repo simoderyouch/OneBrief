@@ -1,21 +1,32 @@
 "use client";
 
 import { useState } from "react";
+import { Check } from "lucide-react";
+import { clientPortalJsonHeaders, getOrCreateClientSessionId } from "@/lib/client-session";
+import { clientPortalApiBase } from "@/lib/client-portal-url";
 
 const FEEDBACK_TYPES = [
   { key: "CHANGE_REQUEST", label: "Change Request", color: "bg-amber-900/40 border-amber-700 text-amber-300" },
-  { key: "APPROVAL", label: "Approval ✓", color: "bg-green-900/40 border-green-700 text-green-300" },
+  { key: "APPROVAL", label: "Approval", color: "bg-green-900/40 border-green-700 text-green-300", icon: Check },
   { key: "QUESTION", label: "Question", color: "bg-blue-900/40 border-blue-700 text-blue-300" },
 ];
 
 interface FeedbackFormProps {
-  token: string;
+  portalSlug: string;
+  portalToken: string;
   files: { id: string; label: string | null; versionNumber: number }[];
+  defaultDisplayName?: string;
 }
 
-export default function FeedbackForm({ token, files }: FeedbackFormProps) {
+export default function FeedbackForm({
+  portalSlug,
+  portalToken,
+  files,
+  defaultDisplayName,
+}: FeedbackFormProps) {
   const [type, setType] = useState("CHANGE_REQUEST");
   const [message, setMessage] = useState("");
+  const [displayName, setDisplayName] = useState(defaultDisplayName ?? "");
   const [fileId, setFileId] = useState("");
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -26,13 +37,16 @@ export default function FeedbackForm({ token, files }: FeedbackFormProps) {
     setLoading(true);
     setError(null);
 
-    const res = await fetch(`/api/client/${token}/feedback`, {
+    const sessionId = getOrCreateClientSessionId();
+    const res = await fetch(`${clientPortalApiBase(portalSlug, portalToken)}/feedback`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: clientPortalJsonHeaders(sessionId),
       body: JSON.stringify({
         type,
         message,
         fileId: fileId || undefined,
+        sessionId,
+        displayName: displayName.trim() || undefined,
       }),
     });
 
@@ -79,15 +93,16 @@ export default function FeedbackForm({ token, files }: FeedbackFormProps) {
         <div>
           <p className="text-sm font-medium text-neutral-300 mb-2">Feedback type</p>
           <div className="flex gap-2 flex-wrap">
-            {FEEDBACK_TYPES.map(({ key, label, color }) => (
+            {FEEDBACK_TYPES.map(({ key, label, color, icon: Icon }) => (
               <button
                 key={key}
                 type="button"
                 onClick={() => setType(key)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
                   type === key ? color : "bg-neutral-800 border-neutral-700 text-neutral-400 hover:border-neutral-600"
                 }`}
               >
+                {Icon && <Icon className="w-3.5 h-3.5 shrink-0" aria-hidden />}
                 {label}
               </button>
             ))}
@@ -111,6 +126,21 @@ export default function FeedbackForm({ token, files }: FeedbackFormProps) {
                 </option>
               ))}
             </select>
+          </div>
+        )}
+
+        {!defaultDisplayName && (
+          <div>
+            <label className="block text-sm font-medium text-neutral-300 mb-1">
+              Your name <span className="text-neutral-500 font-normal">(optional)</span>
+            </label>
+            <input
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              maxLength={120}
+              className="w-full px-3 py-2 bg-neutral-800 border border-neutral-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500"
+              placeholder="How should we address you?"
+            />
           </div>
         )}
 

@@ -94,7 +94,7 @@ export default function FileUpload({ projectId }: FileUploadProps) {
       </div>
 
       {uploadError && (
-        <p className="text-sm text-red-400" role="alert">
+        <p className="text-sm text-neutral-500" role="alert">
           {uploadError}
         </p>
       )}

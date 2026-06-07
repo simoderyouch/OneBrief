@@ -9,9 +9,27 @@ export async function PATCH(request: NextRequest) {
   }
 
   const body = await request.json();
-  const { nickname } = body;
+  const { nickname, whatsappDefaultCountryCode } = body;
+
+  if (whatsappDefaultCountryCode !== undefined) {
+    const code = String(whatsappDefaultCountryCode).replace(/\D/g, "");
+    if (code.length < 1 || code.length > 4) {
+      return Response.json({ error: "Country code must be 1–4 digits" }, { status: 400 });
+    }
+    await prisma.user.update({
+      where: { id: session.user.id },
+      data: { whatsappDefaultCountryCode: code },
+    });
+  }
 
   if (typeof nickname !== "string") {
+    if (whatsappDefaultCountryCode !== undefined) {
+      const updated = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { id: true, name: true, nickname: true, email: true, whatsappDefaultCountryCode: true },
+      });
+      return Response.json(updated);
+    }
     return Response.json({ error: "Nickname must be a string" }, { status: 400 });
   }
 
@@ -27,7 +45,7 @@ export async function PATCH(request: NextRequest) {
       // Keep legacy `name` in sync for exports / older reads (optional mirror).
       name: trimmed || null,
     },
-    select: { id: true, name: true, nickname: true, email: true },
+    select: { id: true, name: true, nickname: true, email: true, whatsappDefaultCountryCode: true },
   });
 
   return Response.json(updated);

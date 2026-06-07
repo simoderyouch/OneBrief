@@ -58,7 +58,7 @@ export default function SecurityTierSelector({
               <div className="flex items-center justify-between gap-2">
                 <span className="text-sm font-medium text-white">{label}</span>
                 {active && (
-                  <span className="text-[10px] uppercase tracking-wide text-green-400">Active</span>
+                  <span className="text-[10px] uppercase tracking-wide text-neutral-500">Active</span>
                 )}
               </div>
               <p className="text-xs text-neutral-500 mt-0.5">{description}</p>

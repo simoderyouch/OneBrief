@@ -46,3 +46,6 @@ next-env.d.ts
 
 # local dev infrastructure
 docker-compose.yml
+
+# uploaded client files (local storage)
+/storage/uploads/

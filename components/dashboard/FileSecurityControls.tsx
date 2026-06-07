@@ -194,13 +194,13 @@ export default function FileSecurityControls({ file, securityTier }: FileSecurit
                 </p>
 
                 {newLinkUrl && (
-                  <div className="rounded-lg border border-green-900/50 bg-green-950/20 p-3 space-y-2">
-                    <p className="text-xs text-green-300 font-medium">New link created</p>
-                    <p className="text-xs text-neutral-400 break-all">{newLinkUrl}</p>
+                  <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-3 space-y-2">
+                    <p className="text-xs text-neutral-400 font-medium">New link created</p>
+                    <p className="text-xs text-neutral-500 break-all">{newLinkUrl}</p>
                     <button
                       type="button"
                       onClick={() => navigator.clipboard.writeText(newLinkUrl)}
-                      className="text-xs text-green-400 hover:text-green-300"
+                      className="text-xs link-subtle no-underline hover:underline"
                     >
                       Copy to clipboard
                     </button>
@@ -215,7 +215,7 @@ export default function FileSecurityControls({ file, securityTier }: FileSecurit
                         className="flex items-center justify-between gap-2 text-xs border border-neutral-800 rounded-lg px-3 py-2"
                       >
                         <div className="text-neutral-400">
-                          <span className={link.tokenActive && !link.revokedAt ? "text-green-400" : "text-red-400"}>
+                          <span className={link.tokenActive && !link.revokedAt ? "text-neutral-400" : "text-neutral-600"}>
                             {link.tokenActive && !link.revokedAt ? "Active" : "Revoked"}
                           </span>
                           {" · "}
@@ -226,7 +226,7 @@ export default function FileSecurityControls({ file, securityTier }: FileSecurit
                           <button
                             type="button"
                             onClick={() => revokeLink(link.id)}
-                            className="text-red-400 hover:text-red-300 shrink-0"
+                            className="text-neutral-500 hover:text-neutral-300 shrink-0"
                           >
                             Revoke
                           </button>

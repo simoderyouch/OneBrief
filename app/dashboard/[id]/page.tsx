@@ -11,6 +11,9 @@ import ProjectDetailActions from "@/components/dashboard/ProjectDetailActions";
 import PaymentTracker from "@/components/dashboard/PaymentTracker";
 import WorkRequestPanel from "@/components/dashboard/WorkRequestPanel";
 import SecurityTierSelector from "@/components/dashboard/SecurityTierSelector";
+import PackageManager from "@/components/dashboard/PackageManager";
+import PaymentGateSettings from "@/components/dashboard/PaymentGateSettings";
+import NotifyWhatsApp from "@/components/dashboard/NotifyWhatsApp";
 import EditProjectModal from "@/components/dashboard/EditProjectModal";
 
 interface Props {
@@ -42,6 +45,10 @@ export default async function ProjectDetailPage({ params }: Props) {
           projectClient: { select: { fullName: true } },
         },
       },
+      packages: {
+        include: { files: { where: { deletedAt: null }, orderBy: { uploadedAt: "desc" } } },
+        orderBy: { sortOrder: "asc" },
+      },
     },
   });
 
@@ -49,30 +56,27 @@ export default async function ProjectDetailPage({ params }: Props) {
 
   const clientProject = serializeProjectForClient(project);
 
-  const totalPaid = clientProject.payments
-    .filter((p) => p.status === "PAID")
-    .reduce((sum, p) => sum + Number(p.amount), 0);
-
   const openFeedback = project.feedback.filter((f: { status: string }) => f.status !== "RESOLVED");
 
   return (
-    <div className="p-8 max-w-5xl mx-auto">
-      {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-sm text-neutral-500 mb-6">
+    <div className="page-shell">
+      <div className="flex items-center gap-2 text-sm text-neutral-600 mb-6">
         <Link href="/dashboard" className="hover:text-neutral-300 transition-colors">Projects</Link>
         <span>/</span>
-        <span className="text-neutral-300 truncate">{project.title}</span>
+        <span className="text-neutral-400 truncate">{project.title}</span>
       </div>
 
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4 mb-8">
+      <div className="flex items-start justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-white">{project.title}</h1>
+          <h1 className="page-title">{project.title}</h1>
           {project.clientName && (
-            <p className="text-neutral-400 text-sm mt-1">Client: {project.clientName}</p>
+            <p className="page-subtitle">Client: {project.clientName}</p>
+          )}
+          {project.description && (
+            <p className="text-sm text-neutral-500 mt-2 max-w-2xl">{project.description}</p>
           )}
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap shrink-0">
           <EditProjectModal
             project={{
               id: clientProject.id,
@@ -81,6 +85,7 @@ export default async function ProjectDetailPage({ params }: Props) {
               serviceType: clientProject.serviceType,
               clientName: clientProject.clientName,
               clientEmail: clientProject.clientEmail,
+              clientWhatsapp: project.clientWhatsapp,
               deadline: clientProject.deadline,
               totalPrice: clientProject.totalPrice,
               currency: clientProject.currency,
@@ -89,6 +94,8 @@ export default async function ProjectDetailPage({ params }: Props) {
           />
           <ProjectDetailActions project={{
             id: project.id,
+            title: project.title,
+            clientName: project.clientName,
             token: project.token,
             tokenActive: project.tokenActive,
             tokenRevokedAt: project.tokenRevokedAt,
@@ -99,13 +106,10 @@ export default async function ProjectDetailPage({ params }: Props) {
         </div>
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-6">
-        {/* Left column */}
-        <div className="lg:col-span-2 space-y-6">
-
-          {/* Files */}
-          <section className="bg-neutral-900 border border-neutral-800 rounded-xl p-5">
-            <h2 className="font-semibold text-white mb-4">Files</h2>
+      <div className="grid lg:grid-cols-3 gap-4">
+        <div className="lg:col-span-2 space-y-4">
+          <section className="panel-padded">
+            <h2 className="text-sm font-medium text-neutral-300 mb-4">Files</h2>
             <FileUpload projectId={project.id} />
             <FileList
               files={clientProject.files as Parameters<typeof FileList>[0]["files"]}
@@ -113,6 +117,8 @@ export default async function ProjectDetailPage({ params }: Props) {
               securityTier={project.securityTier}
             />
           </section>
+
+          <PackageManager projectId={project.id} packages={project.packages} />
 
           <WorkRequestPanel
             projectId={project.id}
@@ -137,102 +143,68 @@ export default async function ProjectDetailPage({ params }: Props) {
             }))}
           />
 
-          {/* Feedback */}
-          <section className="bg-neutral-900 border border-neutral-800 rounded-xl p-5">
+          <section className="panel-padded">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="font-semibold text-white">Feedback</h2>
+              <h2 className="text-sm font-medium text-neutral-300">Feedback</h2>
               {openFeedback.length > 0 && (
-                <span className="text-xs bg-amber-900/40 text-amber-300 border border-amber-800/50 px-2 py-0.5 rounded-full">
-                  {openFeedback.length} open
-                </span>
+                <span className="badge-warn">{openFeedback.length} open</span>
               )}
             </div>
-            <FeedbackList feedbackItems={project.feedback as any} projectId={project.id} />
+            <FeedbackList feedbackItems={project.feedback as Parameters<typeof FeedbackList>[0]["feedbackItems"]} projectId={project.id} />
           </section>
 
-          {/* Internal notes */}
           {project.internalNote && (
-            <section className="bg-amber-950/20 border border-amber-900/30 rounded-xl p-5">
-              <h2 className="font-semibold text-amber-300 text-sm mb-2 flex items-center gap-1.5">
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <section className="panel-padded border-neutral-700/40">
+              <h2 className="text-sm font-medium text-neutral-400 mb-2 flex items-center gap-1.5">
+                <svg className="w-4 h-4 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                 </svg>
                 Internal notes
               </h2>
-              <p className="text-sm text-amber-200/70 whitespace-pre-wrap">{project.internalNote}</p>
+              <p className="text-sm text-neutral-500 whitespace-pre-wrap">{project.internalNote}</p>
             </section>
           )}
         </div>
 
-        {/* Right column */}
         <div className="space-y-4">
-          {/* Project info */}
-          <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-5 space-y-3">
-            <h3 className="text-sm font-semibold text-neutral-300">Project Info</h3>
+          <div className="panel-padded space-y-3">
+            <h3 className="text-sm font-medium text-neutral-400">Contact</h3>
             {project.serviceType && (
               <div className="text-sm">
-                <span className="text-neutral-500">Type</span>
-                <p className="text-white">{project.serviceType}</p>
+                <span className="text-neutral-600">Type</span>
+                <p className="text-neutral-200">{project.serviceType}</p>
               </div>
             )}
             {project.deadline && (
               <div className="text-sm">
-                <span className="text-neutral-500">Deadline</span>
-                <p className="text-white">{new Date(project.deadline).toLocaleDateString()}</p>
+                <span className="text-neutral-600">Deadline</span>
+                <p className="text-neutral-200">{new Date(project.deadline).toLocaleDateString()}</p>
               </div>
             )}
             {project.clientEmail && (
               <div className="text-sm">
-                <span className="text-neutral-500">Client Email</span>
-                <p className="text-white">{project.clientEmail}</p>
+                <span className="text-neutral-600">Client email</span>
+                <p className="text-neutral-200">{project.clientEmail}</p>
               </div>
             )}
           </div>
 
-          {/* Payment summary */}
-          {clientProject.totalPrice != null && (
-            <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-5">
-              <h3 className="text-sm font-semibold text-neutral-300 mb-3">Payments</h3>
-              <div className="space-y-1 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-neutral-500">Total</span>
-                  <span className="text-white">{clientProject.totalPrice.toLocaleString()} {project.currency}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-neutral-500">Paid</span>
-                  <span className="text-green-400">{totalPaid.toLocaleString()} {project.currency}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-neutral-500">Remaining</span>
-                  <span className="text-white">{(Number(project.totalPrice) - totalPaid).toLocaleString()} {project.currency}</span>
-                </div>
-              </div>
-            </div>
-          )}
-
           <PaymentTracker projectId={project.id} currency={project.currency} payments={clientProject.payments} />
+
+          <PaymentGateSettings
+            projectId={project.id}
+            paymentGateEnabled={project.paymentGateEnabled}
+            paymentGateMode={project.paymentGateMode}
+            paymentGateMilestoneId={project.paymentGateMilestoneId}
+            autoUnlockOnPayment={project.autoUnlockOnPayment}
+            milestones={project.payments
+              .filter((p) => p.lineKind === "MILESTONE")
+              .map((p) => ({ id: p.id, label: p.label }))}
+          />
 
           <SecurityTierSelector projectId={project.id} currentTier={project.securityTier} />
 
-          {/* Client link */}
-          <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-5">
-            <h3 className="text-sm font-semibold text-neutral-300 mb-2">Client Link</h3>
-            <p className="text-xs text-neutral-500 mb-3">
-              {project.tokenActive && !project.tokenRevokedAt
-                ? project.tokenExpiresAt
-                  ? `Active until ${new Date(project.tokenExpiresAt).toLocaleDateString()}`
-                  : "Active — share with client"
-                : "Disabled or revoked"}
-            </p>
-            <a
-              href={`/p/${project.token}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block w-full text-center py-2 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white rounded-lg text-xs font-medium transition-colors"
-            >
-              Open client view ↗
-            </a>
-          </div>
+          <NotifyWhatsApp projectId={project.id} clientWhatsapp={project.clientWhatsapp} />
         </div>
       </div>
     </div>

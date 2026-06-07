@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth";
 import { streamFileResponse, type FileAccessIntent } from "@/lib/file-access";
+import { fileProjectInclude } from "@/lib/file-project-include";
 import { prisma } from "@/lib/prisma";
 import { NextRequest } from "next/server";
 
@@ -23,7 +24,10 @@ export async function GET(
     where: { id, deletedAt: null },
     include: {
       project: {
-        select: { id: true, securityTier: true, clientName: true, userId: true },
+        select: {
+          ...fileProjectInclude.project.select,
+          userId: true,
+        },
       },
     },
   });
@@ -38,5 +42,6 @@ export async function GET(
     intent,
     headers: request.headers,
     skipLog: true,
+    skipGate: true,
   });
 }

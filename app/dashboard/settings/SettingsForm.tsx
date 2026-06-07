@@ -11,12 +11,16 @@ interface SettingsFormProps {
     notifyFeedback: boolean;
     notifyUpload: boolean;
     notifyStatus: boolean;
+    whatsappDefaultCountryCode: string;
   };
 }
 
 export default function SettingsForm({ user }: SettingsFormProps) {
   const { update } = useSession();
   const [nickname, setNickname] = useState(user.nickname?.trim() || user.name?.trim() || "");
+  const [whatsappCountryCode, setWhatsappCountryCode] = useState(
+    user.whatsappDefaultCountryCode || "212"
+  );
   const [notifyFeedback, setNotifyFeedback] = useState(user.notifyFeedback);
   const [notifyUpload, setNotifyUpload] = useState(user.notifyUpload);
   const [notifyStatus, setNotifyStatus] = useState(user.notifyStatus);
@@ -35,7 +39,7 @@ export default function SettingsForm({ user }: SettingsFormProps) {
     const res = await fetch("/api/user/profile", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ nickname }),
+      body: JSON.stringify({ nickname, whatsappDefaultCountryCode: whatsappCountryCode }),
     });
     setProfileSaving(false);
     if (!res.ok) {
@@ -90,10 +94,26 @@ export default function SettingsForm({ user }: SettingsFormProps) {
           </div>
 
           {profileError && (
-            <p className="text-sm text-red-400" role="alert">
+            <p className="text-sm text-neutral-500" role="alert">
               {profileError}
             </p>
           )}
+
+          <div>
+            <label className="block text-sm font-medium text-neutral-300 mb-1.5">
+              Default WhatsApp country code
+            </label>
+            <p className="text-xs text-neutral-500 mb-2">
+              Used when client numbers start with 0 (e.g. 0612345678 → +212…). Morocco: 212.
+            </p>
+            <input
+              value={whatsappCountryCode}
+              onChange={(e) => setWhatsappCountryCode(e.target.value.replace(/\D/g, "").slice(0, 4))}
+              className="w-full max-w-[120px] px-4 py-2.5 bg-neutral-800 border border-neutral-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-neutral-500"
+              placeholder="212"
+              inputMode="numeric"
+            />
+          </div>
 
           <div>
             <label className="block text-sm font-medium text-neutral-300 mb-1.5">Email</label>
@@ -114,7 +134,7 @@ export default function SettingsForm({ user }: SettingsFormProps) {
               {profileSaving ? "Saving…" : "Save profile"}
             </button>
             {profileSaved && (
-              <span className="text-sm text-green-400 flex items-center gap-1">
+              <span className="text-sm text-neutral-500 flex items-center gap-1">
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
@@ -127,7 +147,7 @@ export default function SettingsForm({ user }: SettingsFormProps) {
 
       {/* Notifications */}
       <section className="bg-neutral-900 border border-neutral-800 rounded-xl p-6">
-        <h2 className="font-semibold text-white mb-4">Email Notifications</h2>
+        <h2 className="font-semibold text-white mb-4">In-app notifications</h2>
         <div className="space-y-4">
           <Toggle
             label="New feedback from client"
@@ -158,7 +178,7 @@ export default function SettingsForm({ user }: SettingsFormProps) {
             {notifSaving ? "Saving…" : "Save preferences"}
           </button>
           {notifSaved && (
-            <span className="text-sm text-green-400 flex items-center gap-1">
+            <span className="text-sm text-neutral-500 flex items-center gap-1">
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>

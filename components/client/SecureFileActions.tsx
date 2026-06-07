@@ -1,6 +1,13 @@
 "use client";
 
+import {
+  buildClientPortalPreviewPath,
+  clientPortalApiBase,
+} from "@/lib/client-portal-url";
+
 interface SecureFileActionsProps {
+  portalSlug?: string;
+  portalToken?: string;
   /** Project portal token or file share token */
   token: string;
   fileId: string;
@@ -12,6 +19,8 @@ interface SecureFileActionsProps {
 }
 
 export default function SecureFileActions({
+  portalSlug,
+  portalToken,
   token,
   fileId,
   label,
@@ -21,17 +30,23 @@ export default function SecureFileActions({
 }: SecureFileActionsProps) {
   const viewHref =
     useProtectedPreview
-      ? context === "project"
-        ? `/p/${token}/preview/${fileId}`
-        : `/s/${token}/preview`
-      : context === "project"
-        ? `/api/client/${token}/files/${fileId}?intent=view`
-        : `/api/s/${token}/access?intent=view`;
+      ? context === "project" && portalSlug && portalToken
+        ? buildClientPortalPreviewPath(portalSlug, portalToken, fileId)
+        : context === "project"
+          ? `/p/${token}/preview/${fileId}`
+          : `/s/${token}/preview`
+      : context === "project" && portalSlug && portalToken
+        ? `${clientPortalApiBase(portalSlug, portalToken)}/files/${fileId}?intent=view`
+        : context === "project"
+          ? `/api/client/${token}/files/${fileId}?intent=view`
+          : `/api/s/${token}/access?intent=view`;
 
   const downloadHref =
-    context === "project"
-      ? `/api/client/${token}/files/${fileId}?intent=download`
-      : `/api/s/${token}/access?intent=download`;
+    context === "project" && portalSlug && portalToken
+      ? `${clientPortalApiBase(portalSlug, portalToken)}/files/${fileId}?intent=download`
+      : context === "project"
+        ? `/api/client/${token}/files/${fileId}?intent=download`
+        : `/api/s/${token}/access?intent=download`;
 
   return (
     <div className="flex items-center gap-2 shrink-0">

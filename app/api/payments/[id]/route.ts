@@ -1,6 +1,9 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import type { PaymentLineKind } from "@prisma/client";
+import { applyPaymentUnlock } from "@/lib/payments";
+import { milestonePaidEmail } from "@/lib/email";
+import { sendClientEmailWithLog } from "@/lib/notify";
 import { NextRequest } from "next/server";
 
 export async function PATCH(
@@ -63,6 +66,26 @@ export async function PATCH(
     where: { id },
     data,
   });
+
+  if (body.status === "PAID") {
+    await applyPaymentUnlock(payment.projectId);
+    if (payment.project.clientEmail) {
+      const tpl = milestonePaidEmail(
+        payment.project.clientName || "there",
+        payment.project.title,
+        payment.label
+      );
+      await sendClientEmailWithLog({
+        projectId: payment.projectId,
+        type: "MILESTONE_PAID",
+        toEmail: payment.project.clientEmail,
+        subject: tpl.subject,
+        html: tpl.html,
+        body: tpl.textBody,
+        templateKey: "milestone_paid",
+      });
+    }
+  }
 
   return Response.json(updated);
 }

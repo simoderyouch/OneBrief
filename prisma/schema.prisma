@@ -19,10 +19,19 @@ model User {
   notifyFeedback Boolean  @default(true) @map("notify_feedback")
   notifyUpload   Boolean  @default(true) @map("notify_upload")
   notifyStatus   Boolean  @default(true) @map("notify_status")
+  accentColor    String?  @default("#ffffff") @map("accent_color")
+  defaultSecurityTier SecurityTier @default(PROTECTED) @map("default_security_tier")
+  defaultRevisionLimit Int? @default(3) @map("default_revision_limit")
+  defaultCurrency String @default("MAD") @map("default_currency")
+  /** Default country code for client WhatsApp numbers without + (e.g. 212 Morocco) */
+  whatsappDefaultCountryCode String @default("212") @map("whatsapp_default_country_code")
+  studioTerms    String?  @map("studio_terms") @db.Text
   createdAt     DateTime  @default(now()) @map("created_at")
   projects      Project[]
   accounts      Account[]
   sessions      Session[]
+  clientNotes   ClientNote[]
+  templates     ProjectTemplate[]
 
   @@map("users")
 }
@@ -79,13 +88,30 @@ model Project {
   currency        String         @default("MAD")
   clientName      String?        @map("client_name")
   clientEmail     String?        @map("client_email")
+  /** E.164 digits only e.g. 212612345678 — for wa.me notify links */
+  clientWhatsapp  String?        @map("client_whatsapp")
   token           String         @unique
   tokenActive     Boolean        @default(true) @map("token_active")
   tokenExpiresAt  DateTime?      @map("token_expires_at")
   tokenRevokedAt  DateTime?      @map("token_revoked_at")
   /** BASIC = link only · STANDARD = + download toggles & audit · PROTECTED = + watermarked previews */
-  securityTier    SecurityTier   @default(BASIC) @map("security_tier")
+  securityTier    SecurityTier   @default(PROTECTED) @map("security_tier")
   internalNote    String?        @map("internal_note") @db.Text
+  startedAt       DateTime?      @map("started_at")
+  completedAt     DateTime?      @map("completed_at")
+  archivedAt      DateTime?      @map("archived_at")
+  tags            String[]       @default([])
+  priority        ProjectPriority @default(NORMAL)
+  revisionLimit   Int?           @map("revision_limit")
+  revisionRound   Int            @default(0) @map("revision_round")
+  welcomeMessage  String?        @map("welcome_message") @db.Text
+  scopeDocument   String?        @map("scope_document") @db.Text
+  briefContent    String?        @map("brief_content") @db.Text
+  onHold          Boolean        @default(false) @map("on_hold")
+  paymentGateEnabled Boolean     @default(true) @map("payment_gate_enabled")
+  paymentGateMode PaymentGateMode @default(DEPOSIT_PAID) @map("payment_gate_mode")
+  paymentGateMilestoneId String?  @map("payment_gate_milestone_id")
+  autoUnlockOnPayment Boolean    @default(true) @map("auto_unlock_on_payment")
   createdAt       DateTime       @default(now()) @map("created_at")
   updatedAt       DateTime       @updatedAt @map("updated_at")
 
@@ -97,6 +123,7 @@ model Project {
   projectClients ProjectClient[]
   notifications Notification[]
   accessLogs    AccessLog[]
+  packages      DeliverablePackage[]
 
   @@map("projects")
 }
@@ -117,6 +144,7 @@ model AccessLog {
 model File {
   id             String     @id @default(uuid())
   projectId      String     @map("project_id")
+  packageId      String?    @map("package_id")
   parentId       String?    @map("parent_id")
   label          String?
   cloudinaryUrl  String     @map("cloudinary_url")
@@ -125,7 +153,10 @@ model File {
   mimeType       String?    @map("mime_type")
   sizeBytes      Int?       @map("size_bytes")
   versionNumber  Int        @default(1) @map("version_number")
+  revisionRound  Int?       @map("revision_round")
   status         FileStatus @default(CURRENT)
+  approvalStatus FileApprovalStatus @default(NONE) @map("approval_status")
+  isFinalDeliverable Boolean @default(false) @map("is_final_deliverable")
   /** Visible on the client portal */
   clientVisible  Boolean    @default(true) @map("client_visible")
   /** Freelancer explicitly allows download (required for PROTECTED non-finals) */
@@ -135,6 +166,7 @@ model File {
   deletedAt      DateTime?  @map("deleted_at")
 
   project     Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  package     DeliverablePackage? @relation(fields: [packageId], references: [id], onDelete: SetNull)
   parent      File?          @relation("FileVersions", fields: [parentId], references: [id], onDelete: SetNull)
   children    File[]         @relation("FileVersions")
   feedback    Feedback[]
@@ -142,6 +174,56 @@ model File {
   accessLogs  FileAccessLog[]
 
   @@map("files")
+}
+
+model DeliverablePackage {
+  id          String   @id @default(uuid())
+  projectId   String   @map("project_id")
+  name        String
+  description String?  @db.Text
+  sortOrder   Int      @default(0) @map("sort_order")
+  paymentId   String?  @map("payment_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  project Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  payment Payment? @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  files   File[]
+
+  @@index([projectId, sortOrder])
+  @@map("deliverable_packages")
+}
+
+model ProjectTemplate {
+  id                   String        @id @default(uuid())
+  userId               String        @map("user_id")
+  name                 String
+  description          String?       @db.Text
+  serviceType          String?       @map("service_type")
+  defaultRevisionLimit Int?          @map("default_revision_limit")
+  defaultSecurityTier  SecurityTier? @map("default_security_tier")
+  scopeDocument        String?       @map("scope_document") @db.Text
+  briefContent         String?       @map("brief_content") @db.Text
+  createdAt            DateTime      @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("project_templates")
+}
+
+model ClientNote {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  clientEmail String   @map("client_email")
+  clientName  String?  @map("client_name")
+  notes       String?  @db.Text
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, clientEmail])
+  @@map("client_notes")
 }
 
 /** Per-file share link — narrow scope vs whole project link */
@@ -224,6 +306,7 @@ model Payment {
 
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
   workRequest WorkRequest?
+  packages DeliverablePackage[]
 
   @@map("payments")
 }
@@ -295,12 +378,16 @@ model Notification {
   type          NotificationType
   sentTo        NotificationSentTo     @map("sent_to")
   email         String
+  title         String?
+  body          String?              @db.Text
   templateKey   String?              @map("template_key")
   deliveryStatus EmailDeliveryStatus @default(SENT) @map("delivery_status")
+  readAt        DateTime?            @map("read_at")
   sentAt        DateTime             @default(now()) @map("sent_at")
 
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
+  @@index([projectId, sentAt(sort: Desc)])
   @@map("notifications")
 }
 
@@ -314,10 +401,15 @@ enum EmailDeliveryStatus {
 
 enum ProjectStatus {
   DRAFT
+  LEAD
   IN_PROGRESS
   WAITING_FEEDBACK
+  APPROVAL_PENDING
   IN_REVISION
+  ON_HOLD
   DELIVERED
+  COMPLETED
+  CANCELLED
   ARCHIVED
 
   @@map("project_status")
@@ -388,6 +480,10 @@ enum NotificationType {
   FILE_APPROVED
   VERSION_UPLOADED
   STATUS_CHANGED
+  MILESTONE_PAID
+  APPROVAL_RECEIVED
+  PAYMENT_OVERDUE
+  WHATSAPP_NUDGE
 
   @@map("notification_type")
 }
@@ -412,4 +508,30 @@ enum FileAccessEvent {
   DOWNLOAD
 
   @@map("file_access_event")
+}
+
+enum ProjectPriority {
+  LOW
+  NORMAL
+  HIGH
+
+  @@map("project_priority")
+}
+
+enum PaymentGateMode {
+  NONE
+  DEPOSIT_PAID
+  ALL_MILESTONES_PAID
+  SPECIFIC_MILESTONE
+
+  @@map("payment_gate_mode")
+}
+
+enum FileApprovalStatus {
+  NONE
+  PENDING
+  APPROVED
+  CHANGES_REQUESTED
+
+  @@map("file_approval_status")
 }

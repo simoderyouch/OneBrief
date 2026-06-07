@@ -1,32 +1,26 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 
 describe("email templates", () => {
-  it("renders a project link when URL is provided", async () => {
-    process.env.RESEND_API_KEY = process.env.RESEND_API_KEY || "re_test";
+  it("projectStatusChangedEmail returns subject and body", async () => {
     const { projectStatusChangedEmail } = await import("@/lib/email");
 
-    const html = projectStatusChangedEmail(
-      "Karim",
-      "Brand Identity",
+    const tpl = projectStatusChangedEmail(
+      "Acme",
+      "Brand refresh",
       "IN PROGRESS",
-      "https://example.com/p/abc123"
+      "http://localhost:3000/p/abc"
     );
 
-    expect(html).toContain("View project");
-    expect(html).toContain("https://example.com/p/abc123");
+    expect(tpl.subject).toContain("Brand refresh");
+    expect(tpl.html).toContain("IN PROGRESS");
+    expect(tpl.html).toContain("http://localhost:3000/p/abc");
   });
 
-  it("renders fallback text when URL is missing", async () => {
-    process.env.RESEND_API_KEY = process.env.RESEND_API_KEY || "re_test";
+  it("projectStatusChangedEmail works without project URL", async () => {
     const { projectStatusChangedEmail } = await import("@/lib/email");
 
-    const html = projectStatusChangedEmail(
-      "Karim",
-      "Brand Identity",
-      "IN PROGRESS"
-    );
+    const tpl = projectStatusChangedEmail("Acme", "Brand refresh", "DELIVERED");
 
-    expect(html).toContain("private link your designer sent you");
-    expect(html).not.toContain("View project</a>");
+    expect(tpl.html).toContain("DELIVERED");
   });
 });

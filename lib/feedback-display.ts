@@ -1,5 +1,5 @@
 /**
- * Label for who submitted feedback or a work request (portal account, legacy name, session tail, or generic).
+ * Label for who submitted feedback or a work request (display name, session tail, or generic).
  */
 export function feedbackSubmitterLabel(
   submittedByName: string | null | undefined,

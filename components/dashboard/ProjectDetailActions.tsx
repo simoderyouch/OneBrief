@@ -2,13 +2,19 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { buildClientPortalUrl } from "@/lib/client-portal-url";
 
 const STATUS_OPTIONS = [
   { value: "DRAFT", label: "Draft" },
+  { value: "LEAD", label: "Lead / Quote" },
   { value: "IN_PROGRESS", label: "In Progress" },
   { value: "WAITING_FEEDBACK", label: "Waiting Feedback" },
+  { value: "APPROVAL_PENDING", label: "Approval Pending" },
   { value: "IN_REVISION", label: "In Revision" },
+  { value: "ON_HOLD", label: "On Hold" },
   { value: "DELIVERED", label: "Delivered" },
+  { value: "COMPLETED", label: "Completed" },
+  { value: "CANCELLED", label: "Cancelled" },
   { value: "ARCHIVED", label: "Archived" },
 ];
 
@@ -23,6 +29,8 @@ const STAGE_OPTIONS = [
 interface ProjectDetailActionsProps {
   project: {
     id: string;
+    title: string;
+    clientName: string | null;
     token: string;
     tokenActive: boolean;
     tokenRevokedAt: Date | string | null;
@@ -64,7 +72,11 @@ export default function ProjectDetailActions({ project }: ProjectDetailActionsPr
 
   async function copyClientLink() {
     setCopying(true);
-    const url = `${window.location.origin}/p/${project.token}`;
+    const url = buildClientPortalUrl(window.location.origin, {
+      title: project.title,
+      clientName: project.clientName,
+      token: project.token,
+    });
     await navigator.clipboard.writeText(url);
     setTimeout(() => setCopying(false), 2000);
   }
@@ -128,7 +140,7 @@ export default function ProjectDetailActions({ project }: ProjectDetailActionsPr
           >
             {copying ? (
               <>
-                <svg className="w-3.5 h-3.5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-3.5 h-3.5 text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
                 Copied!
@@ -146,7 +158,7 @@ export default function ProjectDetailActions({ project }: ProjectDetailActionsPr
           <button
             onClick={revokeLink}
             disabled={revoking}
-            className="px-3 py-1.5 bg-red-900/30 hover:bg-red-900/50 border border-red-800/50 rounded-lg text-red-400 text-sm font-medium transition-colors disabled:opacity-50"
+            className="px-3 py-1.5 bg-neutral-800/80 hover:bg-neutral-700 border border-neutral-700/50 rounded-lg text-neutral-400 text-sm font-medium transition-colors disabled:opacity-50"
           >
             {revoking ? "…" : "Revoke"}
           </button>

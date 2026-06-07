@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { generateToken, hashToken } from "@/lib/token";
+import { buildClientPortalUrl } from "@/lib/client-portal-url";
 import { CLIENT_TOKEN_TTL_DAYS } from "@/lib/constants";
 import { NextRequest } from "next/server";
 
@@ -39,6 +40,13 @@ export async function POST(
   });
 
   return Response.json({
-    clientUrl: `${process.env.NEXT_PUBLIC_APP_URL}/p/${rawToken}`,
+    clientUrl: buildClientPortalUrl(
+      process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+      {
+        title: project.title,
+        clientName: project.clientName,
+        token: hashedToken,
+      }
+    ),
   });
 }

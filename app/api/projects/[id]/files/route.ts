@@ -1,6 +1,6 @@
 import { getAuthenticatedUser, isDatabaseConnectivityError } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { uploadFile } from "@/lib/supabase";
+import { uploadFile } from "@/lib/storage";
 import { validateUploadFile } from "@/lib/file-validation";
 import { newVersionEmail } from "@/lib/email";
 import { sendClientEmailWithLog } from "@/lib/notify";
@@ -73,6 +73,8 @@ export async function POST(
     const file = formData.get("file") as File | null;
     const label = formData.get("label") as string | null;
     const note = formData.get("note") as string | null;
+    const packageId = formData.get("packageId") as string | null;
+    const isFinalDeliverable = formData.get("isFinalDeliverable") === "true";
 
     if (!file) {
       return Response.json({ error: "No file provided" }, { status: 400 });
@@ -102,10 +104,13 @@ export async function POST(
 
     const uploaded = await uploadFile(file, id);
 
+    const revisionRound = project.revisionRound + (lastFile ? 0 : 1);
+
     const fileRecord = await prisma.file.create({
       data: {
         projectId: id,
         parentId: lastFile?.id,
+        packageId: packageId || undefined,
         label: label || file.name,
         cloudinaryUrl: uploaded.url,
         publicId: uploaded.storagePath,
@@ -113,23 +118,28 @@ export async function POST(
         mimeType: file.type || undefined,
         sizeBytes: uploaded.sizeBytes,
         versionNumber,
+        revisionRound: lastFile ? project.revisionRound : revisionRound,
         note: note || undefined,
         status: "CURRENT",
+        isFinalDeliverable,
+        approvalStatus: "PENDING",
       },
     });
+
+    if (!lastFile) {
+      await prisma.project.update({
+        where: { id },
+        data: { revisionRound },
+      });
+    }
 
     const owner = await prisma.user.findUnique({
       where: { id: user.id },
       select: { notifyUpload: true },
     });
 
-    if (
-      project.clientEmail &&
-      owner?.notifyUpload &&
-      process.env.RESEND_API_KEY &&
-      process.env.RESEND_API_KEY.length > 0
-    ) {
-      const html = newVersionEmail(
+    if (project.clientEmail && owner?.notifyUpload) {
+      const tpl = newVersionEmail(
         project.clientName || "there",
         project.title,
         versionNumber,
@@ -140,8 +150,9 @@ export async function POST(
         projectId: project.id,
         type: "VERSION_UPLOADED",
         toEmail: project.clientEmail,
-        subject: `New version: ${project.title}`,
-        html,
+        subject: tpl.subject,
+        html: tpl.html,
+        body: tpl.textBody,
         templateKey: "version_uploaded",
       });
     }

@@ -5,9 +5,9 @@ import { useRouter } from "next/navigation";
 import { feedbackSubmitterLabel } from "@/lib/feedback-display";
 
 const TYPE_STYLES: Record<string, string> = {
-  CHANGE_REQUEST: "bg-amber-900/40 text-amber-300 border border-amber-800/50",
-  APPROVAL: "bg-green-900/40 text-green-300 border border-green-800/50",
-  QUESTION: "bg-blue-900/40 text-blue-300 border border-blue-800/50",
+  CHANGE_REQUEST: "badge-warn",
+  APPROVAL: "badge-ok",
+  QUESTION: "badge",
 };
 
 const TYPE_LABELS: Record<string, string> = {
@@ -55,11 +55,11 @@ export default function FeedbackList({ feedbackItems, projectId }: { feedbackIte
   return (
     <div className="space-y-3">
       {open.map((item) => (
-        <div key={item.id} className="bg-neutral-900 border border-neutral-800 rounded-xl p-4">
+        <div key={item.id} className="panel p-4">
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1">
               <div className="flex items-center gap-2 flex-wrap mb-2">
-                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${TYPE_STYLES[item.type] || "bg-neutral-800 text-neutral-300"}`}>
+                <span className={`text-xs font-medium ${TYPE_STYLES[item.type] || "badge"}`}>
                   {TYPE_LABELS[item.type] || item.type}
                 </span>
                 <span className="text-xs text-neutral-500">
@@ -100,7 +100,7 @@ export default function FeedbackList({ feedbackItems, projectId }: { feedbackIte
             {resolved.map((item) => (
               <div key={item.id} className="bg-neutral-900/50 border border-neutral-800/50 rounded-lg p-3 opacity-60">
                 <div className="flex items-center gap-2 mb-1 flex-wrap">
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${TYPE_STYLES[item.type] || "bg-neutral-800 text-neutral-300"}`}>
+                  <span className={`text-xs font-medium ${TYPE_STYLES[item.type] || "badge"}`}>
                     {TYPE_LABELS[item.type] || item.type}
                   </span>
                   <span className="text-xs text-neutral-500">

@@ -44,7 +44,7 @@ export default function ProtectedFilePreview({
 
   if (error) {
     return (
-      <div className="rounded-xl border border-red-900/50 bg-red-950/20 p-8 text-center text-red-300 text-sm">
+      <div className="panel p-8 text-center text-neutral-500 text-sm">
         Could not load preview. The link may have expired or access was denied.
       </div>
     );

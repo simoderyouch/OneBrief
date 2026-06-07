@@ -4,11 +4,12 @@ const TYPE_STYLES: Record<string, string> = {
   QUESTION: "bg-blue-900/40 text-blue-300 border border-blue-800/50",
 };
 
+import { Check } from "lucide-react";
 import { feedbackSubmitterLabel } from "@/lib/feedback-display";
 
 const TYPE_LABELS: Record<string, string> = {
   CHANGE_REQUEST: "Change Request",
-  APPROVAL: "Approval ✓",
+  APPROVAL: "Approval",
   QUESTION: "Question",
 };
 
@@ -52,7 +53,10 @@ export default function FeedbackHistory({ feedback }: FeedbackHistoryProps) {
             <div className="flex items-start gap-3">
               <div className="flex-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-2 mb-2">
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${TYPE_STYLES[item.type] || "bg-neutral-800 text-neutral-300"}`}>
+                  <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium ${TYPE_STYLES[item.type] || "bg-neutral-800 text-neutral-300"}`}>
+                    {item.type === "APPROVAL" && (
+                      <Check className="w-3 h-3 shrink-0" aria-hidden />
+                    )}
                     {TYPE_LABELS[item.type] || item.type}
                   </span>
                   <span className="text-xs font-medium text-neutral-400">
@@ -71,8 +75,9 @@ export default function FeedbackHistory({ feedback }: FeedbackHistoryProps) {
                     {getRelativeTime(new Date(item.createdAt))}
                   </span>
                   {item.status === "RESOLVED" && (
-                    <span className="text-xs bg-green-900/30 text-green-400 px-2 py-0.5 rounded-full">
-                      ✓ Resolved
+                    <span className="inline-flex items-center gap-1 text-xs bg-green-900/30 text-green-400 px-2 py-0.5 rounded-full">
+                      <Check className="w-3 h-3 shrink-0" aria-hidden />
+                      Resolved
                     </span>
                   )}
                 </div>

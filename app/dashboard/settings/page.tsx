@@ -20,6 +20,7 @@ export default async function SettingsPage() {
       notifyFeedback: true,
       notifyUpload: true,
       notifyStatus: true,
+      whatsappDefaultCountryCode: true,
     },
   });
 

@@ -24,7 +24,7 @@ export async function GET(
   const project = file.project;
   const tier = project.securityTier;
 
-  const caps = getClientFileCapabilities(tier, file);
+  const caps = getClientFileCapabilities(tier, file, file.project);
   const shareDownload = link.downloadAllowed || caps.canDownload;
 
   return Response.json({

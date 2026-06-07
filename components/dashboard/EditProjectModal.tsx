@@ -23,6 +23,7 @@ interface Project {
   serviceType: string | null;
   clientName: string | null;
   clientEmail: string | null;
+  clientWhatsapp: string | null;
   deadline: Date | string | null;
   totalPrice: unknown;
   currency: string;
@@ -43,6 +44,7 @@ export default function EditProjectModal({ project }: EditProjectModalProps) {
     serviceType: project.serviceType || "",
     clientName: project.clientName || "",
     clientEmail: project.clientEmail || "",
+    clientWhatsapp: project.clientWhatsapp || "",
     deadline: project.deadline
       ? new Date(project.deadline as string).toISOString().split("T")[0]
       : "",
@@ -143,6 +145,19 @@ export default function EditProjectModal({ project }: EditProjectModalProps) {
                     placeholder="client@email.com"
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-neutral-300 mb-1">Client WhatsApp</label>
+                <input
+                  name="clientWhatsapp"
+                  value={form.clientWhatsapp}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 bg-neutral-800 border border-neutral-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500"
+                  placeholder="0612345678 or 212612345678"
+                  inputMode="tel"
+                />
+                <p className="text-xs text-neutral-500 mt-1">For &quot;Notify on WhatsApp&quot; on the project page.</p>
               </div>
 
               <div>

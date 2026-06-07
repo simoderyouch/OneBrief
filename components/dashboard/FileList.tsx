@@ -23,9 +23,9 @@ interface FileListProps {
 }
 
 const STATUS_STYLES: Record<string, string> = {
-  CURRENT: "bg-blue-900/40 text-blue-300",
-  FINAL: "bg-green-900/40 text-green-300",
-  SUPERSEDED: "bg-neutral-800 text-neutral-500",
+  CURRENT: "badge",
+  FINAL: "badge-ok",
+  SUPERSEDED: "badge text-neutral-600",
 };
 
 function formatBytes(bytes: number | null): string {
@@ -74,23 +74,17 @@ export default function FileList({ files, projectId, securityTier }: FileListPro
           </div>
 
           <div className="flex-1 min-w-0">
-            <p className="text-sm text-white truncate">{file.label || "File"}</p>
-            <div className="flex items-center gap-2 text-xs text-neutral-500 flex-wrap">
+            <p className="text-sm text-neutral-200 truncate">{file.label || "File"}</p>
+            <div className="flex items-center gap-2 text-xs text-neutral-600 flex-wrap">
               <span>v{file.versionNumber}</span>
-              <span
-                className={`px-1.5 py-0.5 rounded text-xs ${STATUS_STYLES[file.status] || "bg-neutral-800 text-neutral-500"}`}
-              >
+              <span className={STATUS_STYLES[file.status] || "badge"}>
                 {file.status}
               </span>
               {!file.clientVisible && (
-                <span className="px-1.5 py-0.5 rounded text-xs bg-neutral-800 text-neutral-500">
-                  Hidden
-                </span>
+                <span className="badge">Hidden</span>
               )}
               {file.downloadAllowed && (
-                <span className="px-1.5 py-0.5 rounded text-xs bg-neutral-800 text-neutral-500">
-                  DL on
-                </span>
+                <span className="badge">DL on</span>
               )}
               {file.format && <span>.{file.format.toUpperCase()}</span>}
               {file.sizeBytes && <span>{formatBytes(file.sizeBytes)}</span>}
@@ -103,7 +97,7 @@ export default function FileList({ files, projectId, securityTier }: FileListPro
               href={`/api/files/${file.id}/access?intent=view`}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-xs text-neutral-400 hover:text-white transition-colors px-2 py-1 bg-neutral-800 hover:bg-neutral-700 rounded"
+              className="text-xs text-neutral-500 hover:text-neutral-200 transition-colors px-2 py-1 bg-neutral-800/80 hover:bg-neutral-700 rounded"
             >
               View
             </a>
@@ -115,7 +109,7 @@ export default function FileList({ files, projectId, securityTier }: FileListPro
                 <button
                   onClick={() => handleDelete(file.id)}
                   disabled={deleting === file.id}
-                  className="text-xs px-2 py-1 bg-red-900/60 hover:bg-red-900 text-red-300 rounded transition-colors disabled:opacity-50"
+                  className="text-xs px-2 py-1 bg-neutral-800 text-neutral-400 hover:bg-neutral-700 rounded transition-colors disabled:opacity-50"
                 >
                   {deleting === file.id ? "…" : "Confirm"}
                 </button>
@@ -129,7 +123,7 @@ export default function FileList({ files, projectId, securityTier }: FileListPro
             ) : (
               <button
                 onClick={() => setConfirmId(file.id)}
-                className="text-xs px-2 py-1 bg-neutral-800 hover:bg-neutral-700 text-neutral-400 hover:text-red-400 rounded transition-colors"
+                className="text-xs px-2 py-1 bg-neutral-800/80 hover:bg-neutral-700 text-neutral-500 hover:text-neutral-300 rounded transition-colors"
                 title="Delete file"
               >
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { tokenToStoredValue } from "@/lib/token";
+import { parsePortalTokenFromParams, parsePortalTokenFromUrlSegment } from "@/lib/client-portal-url";
 import { rateLimitPublicByToken } from "@/lib/rate-limit";
 
 export type PublicProjectError =
@@ -33,8 +33,33 @@ export async function resolvePublicProject(
   | { ok: true; project: NonNullable<Awaited<ReturnType<typeof fetchProjectByToken>>> }
   | { ok: false; error: PublicProjectError }
 > {
+  const stored = parsePortalTokenFromUrlSegment(tokenFromUrl);
+  return resolvePublicProjectByStoredToken(stored, headers, options);
+}
+
+/** Validates `/p/[slug]/[token]` and `/api/client/[slug]/[token]` routes. */
+export async function resolvePublicPortal(
+  slug: string,
+  tokenFromUrl: string,
+  headers: Headers,
+  options: ResolveOptions = {}
+): Promise<
+  | { ok: true; project: NonNullable<Awaited<ReturnType<typeof fetchProjectByToken>>> }
+  | { ok: false; error: PublicProjectError }
+> {
+  const stored = parsePortalTokenFromParams(slug, tokenFromUrl);
+  return resolvePublicProjectByStoredToken(stored, headers, options);
+}
+
+async function resolvePublicProjectByStoredToken(
+  stored: string,
+  headers: Headers,
+  options: ResolveOptions = {}
+): Promise<
+  | { ok: true; project: NonNullable<Awaited<ReturnType<typeof fetchProjectByToken>>> }
+  | { ok: false; error: PublicProjectError }
+> {
   const logAccess = options.logAccess !== false;
-  const stored = tokenToStoredValue(tokenFromUrl);
 
   const { success } = await rateLimitPublicByToken(stored);
   if (!success) {
@@ -95,7 +120,15 @@ async function fetchProjectByToken(storedToken: string) {
           projectClient: { select: { id: true, fullName: true, email: true } },
         },
       },
-      user: { select: { name: true, nickname: true, avatarUrl: true, email: true } },
+      user: {
+        select: {
+          name: true,
+          nickname: true,
+          avatarUrl: true,
+          email: true,
+          accentColor: true,
+        },
+      },
     },
   });
 }

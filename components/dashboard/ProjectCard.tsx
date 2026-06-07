@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Calendar, MessageCircle } from "lucide-react";
 
 const STATUS_COLORS: Record<string, string> = {
   DRAFT: "bg-neutral-800 text-neutral-300",
@@ -78,13 +79,15 @@ export default function ProjectCard({ project }: ProjectCardProps) {
 
           <div className="flex items-center gap-4 text-xs text-neutral-500">
             {project.deadline && (
-              <span className={deadlinePassed ? "text-red-400" : ""}>
-                📅 {new Date(project.deadline).toLocaleDateString()}
+              <span className={`inline-flex items-center gap-1 ${deadlinePassed ? "text-red-400" : ""}`}>
+                <Calendar className="w-3.5 h-3.5 shrink-0" aria-hidden />
+                {new Date(project.deadline).toLocaleDateString()}
               </span>
             )}
             {project.feedback.length > 0 && (
-              <span className="text-amber-400">
-                💬 {project.feedback.length} open
+              <span className="inline-flex items-center gap-1 text-amber-400">
+                <MessageCircle className="w-3.5 h-3.5 shrink-0" aria-hidden />
+                {project.feedback.length} open
               </span>
             )}
             {project.totalPrice && (

@@ -16,6 +16,13 @@ type Milestone = {
   stripeLink: string | null;
 };
 
+function statusClass(status: string, overdue: boolean) {
+  if (status === "PAID") return "status-paid";
+  if (status === "OVERDUE" || overdue) return "status-overdue";
+  if (status === "CANCELLED") return "badge text-neutral-600";
+  return "status-pending";
+}
+
 export default function PaymentTracker({
   projectId,
   currency,
@@ -65,14 +72,14 @@ export default function PaymentTracker({
   }
 
   return (
-    <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-5">
-      <h3 className="text-sm font-semibold text-neutral-300 mb-1">Payment milestones</h3>
-      <p className="text-xs text-neutral-500 mb-3">
-        Original quote lines. Extra scope from the client goes through <strong className="text-neutral-400">Extra work requests</strong> first, then appears here when they accept.
+    <div className="panel-padded">
+      <h3 className="text-sm font-medium text-neutral-300 mb-1">Payment milestones</h3>
+      <p className="text-xs text-neutral-600 mb-3">
+        Original quote lines. Extra scope from the client goes through <strong className="text-neutral-500 font-medium">Extra work requests</strong> first, then appears here when they accept.
       </p>
       <div className="space-y-2 mb-4">
         {payments.length === 0 ? (
-          <p className="text-xs text-neutral-500">No payment lines yet.</p>
+          <p className="text-xs text-neutral-600">No payment lines yet.</p>
         ) : (
           payments.map((p) => {
             const isChange = p.lineKind === "CHANGE_ORDER";
@@ -83,43 +90,31 @@ export default function PaymentTracker({
             return (
               <div
                 key={p.id}
-                className={`flex flex-wrap items-center justify-between gap-2 py-2 border-t border-neutral-800 first:border-t-0 first:pt-0 ${
-                  overdue ? "bg-red-950/20 -mx-2 px-2 rounded-lg" : ""
+                className={`flex flex-wrap items-center justify-between gap-2 py-2 border-t border-neutral-800/60 first:border-t-0 first:pt-0 ${
+                  overdue ? "bg-neutral-900/50 -mx-2 px-2 rounded-lg" : ""
                 }`}
               >
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <p className="text-sm text-white">{p.label}</p>
+                    <p className="text-sm text-neutral-200">{p.label}</p>
                     {isChange && (
-                      <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-amber-900/40 text-amber-200 border border-amber-800/50">
-                        From request
-                      </span>
+                      <span className="badge-warn">From request</span>
                     )}
                   </div>
                   {p.description && (
-                    <p className="text-xs text-neutral-500 mt-0.5 whitespace-pre-wrap">{p.description}</p>
+                    <p className="text-xs text-neutral-600 mt-0.5 whitespace-pre-wrap">{p.description}</p>
                   )}
                   {p.dueDate && (p.status === "PENDING" || p.status === "OVERDUE") && (
-                    <p className={`text-xs ${overdue ? "text-red-400" : "text-neutral-500"}`}>
+                    <p className={`text-xs ${overdue ? "text-neutral-500" : "text-neutral-600"}`}>
                       Due {new Date(p.dueDate).toLocaleDateString()}
                     </p>
                   )}
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                  <span className="text-sm text-white">
+                  <span className="text-sm text-money">
                     {Number(p.amount).toLocaleString()} {p.currency}
                   </span>
-                  <span
-                    className={`text-xs px-2 py-0.5 rounded-full ${
-                      p.status === "PAID"
-                        ? "bg-green-900/50 text-green-300"
-                        : p.status === "OVERDUE" || overdue
-                          ? "bg-red-900/40 text-red-300"
-                          : p.status === "CANCELLED"
-                            ? "bg-neutral-800 text-neutral-500"
-                            : "bg-neutral-800 text-neutral-400"
-                    }`}
-                  >
+                  <span className={statusClass(p.status, !!overdue)}>
                     {p.status}
                   </span>
                   {p.stripeLink && (
@@ -127,7 +122,7 @@ export default function PaymentTracker({
                       href={p.stripeLink}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-xs text-blue-400 hover:underline"
+                      className="text-xs link-subtle no-underline hover:underline"
                     >
                       Pay
                     </a>
@@ -136,7 +131,7 @@ export default function PaymentTracker({
                     <button
                       type="button"
                       onClick={() => markPaid(p.id)}
-                      className="text-xs px-2 py-1 bg-neutral-800 rounded text-neutral-300 hover:bg-neutral-700"
+                      className="text-xs px-2 py-1 bg-neutral-800/80 rounded text-neutral-400 hover:bg-neutral-700 hover:text-neutral-200 transition-colors"
                     >
                       Mark paid
                     </button>
@@ -148,13 +143,13 @@ export default function PaymentTracker({
         )}
       </div>
 
-      <form onSubmit={addMilestone} className="space-y-2 border-t border-neutral-800 pt-4">
-        <p className="text-xs font-medium text-neutral-400 mb-2">Add milestone</p>
+      <form onSubmit={addMilestone} className="space-y-2 border-t border-neutral-800/60 pt-4">
+        <p className="text-xs font-medium text-neutral-500 mb-2">Add milestone</p>
         <input
           value={label}
           onChange={(e) => setLabel(e.target.value)}
           placeholder="Label (e.g. Deposit, Final)"
-          className="w-full px-3 py-2 bg-neutral-800 border border-neutral-700 rounded-lg text-white text-sm"
+          className="input-field"
         />
         <div className="flex gap-2 flex-wrap">
           <input
@@ -163,25 +158,25 @@ export default function PaymentTracker({
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             placeholder={`Amount (${currency})`}
-            className="flex-1 min-w-[120px] px-3 py-2 bg-neutral-800 border border-neutral-700 rounded-lg text-white text-sm"
+            className="input-field flex-1 min-w-[120px]"
           />
           <input
             type="date"
             value={due}
             onChange={(e) => setDue(e.target.value)}
-            className="px-3 py-2 bg-neutral-800 border border-neutral-700 rounded-lg text-white text-sm"
+            className="input-field w-auto"
           />
         </div>
         <input
           value={stripeLinkM}
           onChange={(e) => setStripeLinkM(e.target.value)}
           placeholder="Payment link (optional)"
-          className="w-full px-3 py-2 bg-neutral-800 border border-neutral-700 rounded-lg text-white text-sm"
+          className="input-field"
         />
         <button
           type="submit"
           disabled={saving}
-          className="w-full py-2 bg-white text-neutral-900 rounded-lg text-sm font-semibold disabled:opacity-50"
+          className="btn-primary w-full py-2.5 disabled:cursor-not-allowed"
         >
           {saving ? "Saving…" : "Add milestone"}
         </button>
