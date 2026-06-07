@@ -1,0 +1,415 @@
+// Freelancer Client Platform - Database Schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  name          String?
+  /** Commercial / studio name shown to clients and in the app sidebar (optional). Falls back to `name` if empty. */
+  nickname      String?   @map("nickname")
+  avatarUrl     String?   @map("avatar_url")
+  passwordHash  String?   @map("password_hash")
+  notifyFeedback Boolean  @default(true) @map("notify_feedback")
+  notifyUpload   Boolean  @default(true) @map("notify_upload")
+  notifyStatus   Boolean  @default(true) @map("notify_status")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  projects      Project[]
+  accounts      Account[]
+  sessions      Session[]
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(uuid())
+  userId            String  @map("user_id")
+  type              String
+  provider          String
+  providerAccountId String  @map("provider_account_id")
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  sessionToken String   @unique @map("session_token")
+  userId       String   @map("user_id")
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+model Project {
+  id              String         @id @default(uuid())
+  userId          String         @map("user_id")
+  title           String
+  description     String?
+  serviceType     String?        @map("service_type")
+  status          ProjectStatus  @default(DRAFT)
+  stage           ProjectStage   @default(BRIEF)
+  deadline        DateTime?
+  totalPrice      Decimal?       @map("total_price") @db.Decimal(10, 2)
+  currency        String         @default("MAD")
+  clientName      String?        @map("client_name")
+  clientEmail     String?        @map("client_email")
+  token           String         @unique
+  tokenActive     Boolean        @default(true) @map("token_active")
+  tokenExpiresAt  DateTime?      @map("token_expires_at")
+  tokenRevokedAt  DateTime?      @map("token_revoked_at")
+  /** BASIC = link only · STANDARD = + download toggles & audit · PROTECTED = + watermarked previews */
+  securityTier    SecurityTier   @default(BASIC) @map("security_tier")
+  internalNote    String?        @map("internal_note") @db.Text
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  files        File[]
+  feedback     Feedback[]
+  payments      Payment[]
+  workRequests  WorkRequest[]
+  projectClients ProjectClient[]
+  notifications Notification[]
+  accessLogs    AccessLog[]
+
+  @@map("projects")
+}
+
+model AccessLog {
+  id        String   @id @default(uuid())
+  projectId String   @map("project_id")
+  ipAddress String?  @map("ip_address")
+  userAgent String?  @map("user_agent") @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, createdAt])
+  @@map("access_logs")
+}
+
+model File {
+  id             String     @id @default(uuid())
+  projectId      String     @map("project_id")
+  parentId       String?    @map("parent_id")
+  label          String?
+  cloudinaryUrl  String     @map("cloudinary_url")
+  publicId       String     @map("public_id")
+  format         String?
+  mimeType       String?    @map("mime_type")
+  sizeBytes      Int?       @map("size_bytes")
+  versionNumber  Int        @default(1) @map("version_number")
+  status         FileStatus @default(CURRENT)
+  /** Visible on the client portal */
+  clientVisible  Boolean    @default(true) @map("client_visible")
+  /** Freelancer explicitly allows download (required for PROTECTED non-finals) */
+  downloadAllowed Boolean   @default(false) @map("download_allowed")
+  note           String?    @db.Text
+  uploadedAt     DateTime   @default(now()) @map("uploaded_at")
+  deletedAt      DateTime?  @map("deleted_at")
+
+  project     Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  parent      File?          @relation("FileVersions", fields: [parentId], references: [id], onDelete: SetNull)
+  children    File[]         @relation("FileVersions")
+  feedback    Feedback[]
+  shareLinks  FileShareLink[]
+  accessLogs  FileAccessLog[]
+
+  @@map("files")
+}
+
+/** Per-file share link — narrow scope vs whole project link */
+model FileShareLink {
+  id              String    @id @default(uuid())
+  fileId          String    @map("file_id")
+  token           String    @unique
+  tokenActive     Boolean   @default(true) @map("token_active")
+  downloadAllowed Boolean   @default(false) @map("download_allowed")
+  maxViews        Int?      @map("max_views")
+  viewCount       Int       @default(0) @map("view_count")
+  expiresAt       DateTime? @map("expires_at")
+  revokedAt       DateTime? @map("revoked_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  file       File            @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  accessLogs FileAccessLog[]
+
+  @@index([fileId, createdAt(sort: Desc)])
+  @@map("file_share_links")
+}
+
+model FileAccessLog {
+  id          String          @id @default(uuid())
+  fileId      String          @map("file_id")
+  projectId   String          @map("project_id")
+  eventType   FileAccessEvent @map("event_type")
+  shareLinkId String?         @map("share_link_id")
+  ipAddress   String?         @map("ip_address")
+  userAgent   String?         @map("user_agent") @db.Text
+  createdAt   DateTime        @default(now()) @map("created_at")
+
+  file      File           @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  shareLink FileShareLink? @relation(fields: [shareLinkId], references: [id], onDelete: SetNull)
+
+  @@index([fileId, createdAt(sort: Desc)])
+  @@index([projectId, createdAt(sort: Desc)])
+  @@map("file_access_logs")
+}
+
+model Feedback {
+  id         String         @id @default(uuid())
+  projectId  String         @map("project_id")
+  fileId     String?        @map("file_id")
+  type       FeedbackType
+  message    String         @db.Text
+  /** Optional display name from the client when submitting feedback */
+  submittedByName         String? @map("submitted_by_name") @db.VarChar(80)
+  /** Stable anonymous id from the client browser (same device = same id for this link) */
+  submittedBySessionId    String? @map("submitted_by_session_id") @db.VarChar(64)
+  projectClientId String?   @map("project_client_id")
+  status     FeedbackStatus @default(OPEN)
+  createdAt  DateTime       @default(now()) @map("created_at")
+  resolvedAt DateTime?      @map("resolved_at")
+
+  project       Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  file          File?         @relation(fields: [fileId], references: [id], onDelete: SetNull)
+  projectClient ProjectClient? @relation(fields: [projectClientId], references: [id], onDelete: SetNull)
+
+  @@index([projectId, createdAt(sort: Desc)])
+  @@index([projectClientId])
+  @@map("feedback")
+}
+
+model Payment {
+  id          String        @id @default(uuid())
+  projectId   String        @map("project_id")
+  label       String
+  description String?       @db.Text
+  /** Original quote line vs extra scope billed as a change order */
+  lineKind    PaymentLineKind @default(MILESTONE) @map("line_kind")
+  amount      Decimal       @db.Decimal(10, 2)
+  currency    String        @default("MAD")
+  status      PaymentStatus @default(PENDING)
+  dueDate     DateTime?     @map("due_date")
+  paidDate    DateTime?     @map("paid_date")
+  note        String?       @db.Text
+  stripeLink  String?       @map("stripe_link")
+  createdAt   DateTime      @default(now()) @map("created_at")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  workRequest WorkRequest?
+
+  @@map("payments")
+}
+
+/** Client asks for extra scope; freelancer quotes; client accepts → payment line created */
+model WorkRequest {
+  id          String   @id @default(uuid())
+  projectId   String   @map("project_id")
+  title       String   @db.VarChar(200)
+  description String   @db.Text
+  submittedByName         String? @map("submitted_by_name") @db.VarChar(80)
+  submittedBySessionId    String? @map("submitted_by_session_id") @db.VarChar(64)
+  projectClientId String? @map("project_client_id")
+  status      WorkRequestStatus @default(PENDING)
+  quotedAmount Decimal? @map("quoted_amount") @db.Decimal(10, 2)
+  quotedNote  String?  @map("quoted_note") @db.Text
+  stripeLink  String?  @map("stripe_link")
+  paymentId   String?  @unique @map("payment_id")
+  acceptedAt  DateTime? @map("accepted_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  project       Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  payment       Payment?      @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  projectClient ProjectClient? @relation(fields: [projectClientId], references: [id], onDelete: SetNull)
+  messages      WorkRequestMessage[]
+
+  @@index([projectId, createdAt(sort: Desc)])
+  @@index([projectClientId])
+  @@map("work_requests")
+}
+
+/** Per-project portal account for clients accessing `/p/[token]` (feedback, work requests, email). */
+model ProjectClient {
+  id           String   @id @default(uuid())
+  projectId    String   @map("project_id")
+  email        String   @db.VarChar(255)
+  fullName     String   @map("full_name") @db.VarChar(120)
+  passwordHash String   @map("password_hash")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  project      Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  feedback     Feedback[]
+  workRequests WorkRequest[]
+
+  @@unique([projectId, email])
+  @@index([projectId])
+  @@map("project_clients")
+}
+
+model WorkRequestMessage {
+  id            String   @id @default(uuid())
+  workRequestId String   @map("work_request_id")
+  /** true = client (public link), false = freelancer */
+  fromClient    Boolean  @map("from_client")
+  body          String   @db.Text
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  workRequest WorkRequest @relation(fields: [workRequestId], references: [id], onDelete: Cascade)
+
+  @@index([workRequestId, createdAt])
+  @@map("work_request_messages")
+}
+
+model Notification {
+  id            String               @id @default(uuid())
+  projectId     String               @map("project_id")
+  type          NotificationType
+  sentTo        NotificationSentTo     @map("sent_to")
+  email         String
+  templateKey   String?              @map("template_key")
+  deliveryStatus EmailDeliveryStatus @default(SENT) @map("delivery_status")
+  sentAt        DateTime             @default(now()) @map("sent_at")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+enum EmailDeliveryStatus {
+  PENDING
+  SENT
+  FAILED
+
+  @@map("email_delivery_status")
+}
+
+enum ProjectStatus {
+  DRAFT
+  IN_PROGRESS
+  WAITING_FEEDBACK
+  IN_REVISION
+  DELIVERED
+  ARCHIVED
+
+  @@map("project_status")
+}
+
+enum ProjectStage {
+  BRIEF
+  CONCEPTS
+  REFINEMENT
+  FINALS
+  DELIVERY
+
+  @@map("project_stage")
+}
+
+enum FileStatus {
+  CURRENT
+  SUPERSEDED
+  FINAL
+
+  @@map("file_status")
+}
+
+enum FeedbackType {
+  CHANGE_REQUEST
+  APPROVAL
+  QUESTION
+
+  @@map("feedback_type")
+}
+
+enum FeedbackStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+
+  @@map("feedback_status")
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  OVERDUE
+  CANCELLED
+
+  @@map("payment_status")
+}
+
+/** Milestone vs billable add-on / new scope (change order) */
+enum PaymentLineKind {
+  MILESTONE
+  CHANGE_ORDER
+
+  @@map("payment_line_kind")
+}
+
+enum WorkRequestStatus {
+  PENDING
+  QUOTED
+  ACCEPTED
+  DECLINED
+
+  @@map("work_request_status")
+}
+
+enum NotificationType {
+  FEEDBACK_RECEIVED
+  FILE_APPROVED
+  VERSION_UPLOADED
+  STATUS_CHANGED
+
+  @@map("notification_type")
+}
+
+enum NotificationSentTo {
+  FREELANCER
+  CLIENT
+
+  @@map("notification_sent_to")
+}
+
+enum SecurityTier {
+  BASIC
+  STANDARD
+  PROTECTED
+
+  @@map("security_tier")
+}
+
+enum FileAccessEvent {
+  VIEW
+  DOWNLOAD
+
+  @@map("file_access_event")
+}
