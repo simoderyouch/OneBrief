@@ -43,3 +43,9 @@ next-env.d.ts
 
 /lib/generated/prisma
 .env.local
+
+# local docs and planning notes
+*.md
+
+# local dev infrastructure
+docker-compose.yml
