@@ -195,6 +195,50 @@ export default async function ClientPortalPage({
             />
           </section>
         )}
+
+        {/* RIB / bank details — shown when payment is visible and RIB is configured */}
+        {showPayments && (project.user?.ribIban || project.user?.ribBic || project.user?.ribAccountHolder) && (
+          <section>
+            <h2 className="text-lg font-semibold text-white mb-4">Payment instructions</h2>
+            <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-5 space-y-3">
+              <p className="text-xs text-neutral-500">
+                Transfer your payment to the following bank account and reference your project name.
+              </p>
+              <div className="space-y-2 pt-1">
+                {project.user?.ribAccountHolder && (
+                  <div className="flex items-start gap-3">
+                    <span className="text-xs text-neutral-500 w-28 shrink-0 pt-0.5">Account holder</span>
+                    <span className="text-sm text-white font-medium">{project.user.ribAccountHolder}</span>
+                  </div>
+                )}
+                {project.user?.ribBankName && (
+                  <div className="flex items-start gap-3">
+                    <span className="text-xs text-neutral-500 w-28 shrink-0 pt-0.5">Bank</span>
+                    <span className="text-sm text-white">{project.user.ribBankName}</span>
+                  </div>
+                )}
+                {project.user?.ribIban && (
+                  <div className="flex items-start gap-3">
+                    <span className="text-xs text-neutral-500 w-28 shrink-0 pt-0.5">IBAN</span>
+                    <span className="text-sm text-white font-mono tracking-wider break-all">
+                      {project.user.ribIban.replace(/(.{4})/g, "$1 ").trim()}
+                    </span>
+                  </div>
+                )}
+                {project.user?.ribBic && (
+                  <div className="flex items-start gap-3">
+                    <span className="text-xs text-neutral-500 w-28 shrink-0 pt-0.5">BIC / SWIFT</span>
+                    <span className="text-sm text-white font-mono">{project.user.ribBic}</span>
+                  </div>
+                )}
+                <div className="flex items-start gap-3 pt-1 border-t border-neutral-800 mt-2">
+                  <span className="text-xs text-neutral-500 w-28 shrink-0 pt-0.5">Reference</span>
+                  <span className="text-sm text-neutral-300">{project.title}</span>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
       </div>
     </div>
   );
