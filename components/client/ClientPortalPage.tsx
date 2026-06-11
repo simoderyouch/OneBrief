@@ -40,10 +40,23 @@ export default async function ClientPortalPage({
   const { project } = result;
 
   await refreshPaymentOverdue(project.id);
-  const payments = await prisma.payment.findMany({
-    where: { projectId: project.id },
-    orderBy: { createdAt: "asc" },
-  });
+  const [payments, deliveryLinks] = await Promise.all([
+    prisma.payment.findMany({
+      where: { projectId: project.id },
+      orderBy: { createdAt: "asc" },
+    }),
+    prisma.deliveryLink.findMany({
+      where: { projectId: project.id },
+      orderBy: { createdAt: "asc" },
+    }),
+  ]);
+
+  // Show payment summary once project reaches later stages
+  const PAYMENT_STAGES = ["FINALS", "DELIVERY"];
+  const PAYMENT_STATUSES = ["IN_REVISION", "DELIVERED", "COMPLETED", "WAITING_FEEDBACK"];
+  const showPayments =
+    PAYMENT_STAGES.includes(project.stage) ||
+    PAYMENT_STATUSES.includes(project.status);
 
   const currentFiles = project.files.filter(
     (f) =>
@@ -133,11 +146,40 @@ export default async function ClientPortalPage({
           }))}
         />
 
-        {project.totalPrice && (
+        {/* Delivery links */}
+        {deliveryLinks.length > 0 && (
+          <section>
+            <h2 className="text-lg font-semibold text-white mb-4">Download your files</h2>
+            <div className="space-y-3">
+              {deliveryLinks.map((link) => (
+                <a
+                  key={link.id}
+                  href={`/api/client/${slug}/${token}/delivery/${link.id}`}
+                  className="flex items-center justify-between gap-4 bg-neutral-900 border border-neutral-800 hover:border-neutral-600 rounded-xl px-5 py-4 transition-colors group"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-lg bg-neutral-800 group-hover:bg-neutral-700 flex items-center justify-center transition-colors shrink-0">
+                      <svg className="w-4 h-4 text-neutral-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                      </svg>
+                    </div>
+                    <span className="text-sm font-medium text-white">{link.label}</span>
+                  </div>
+                  <svg className="w-4 h-4 text-neutral-500 group-hover:text-neutral-300 transition-colors shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                  </svg>
+                </a>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Payment summary — shown at later stages only */}
+        {showPayments && payments.length > 0 && (
           <section>
             <h2 className="text-lg font-semibold text-white mb-4">Payment summary</h2>
             <PaymentSummary
-              total={Number(project.totalPrice)}
+              total={Number(project.totalPrice ?? 0)}
               paid={totalPaid}
               currency={project.currency}
               payments={payments.map((p) => ({

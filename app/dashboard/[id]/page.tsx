@@ -16,6 +16,7 @@ import PaymentGateSettings from "@/components/dashboard/PaymentGateSettings";
 import NotifyWhatsApp from "@/components/dashboard/NotifyWhatsApp";
 import EditProjectModal from "@/components/dashboard/EditProjectModal";
 import ClientActivityPanel from "@/components/dashboard/ClientActivityPanel";
+import DeliveryLinksPanel from "@/components/dashboard/DeliveryLinksPanel";
 import { getProjectClientActivity } from "@/lib/client-activity";
 
 interface Props {
@@ -57,7 +58,10 @@ export default async function ProjectDetailPage({ params }: Props) {
   if (!project) notFound();
 
   const clientProject = serializeProjectForClient(project);
-  const clientActivity = await getProjectClientActivity(id, userId);
+  const [clientActivity, deliveryLinks] = await Promise.all([
+    getProjectClientActivity(id, userId),
+    prisma.deliveryLink.findMany({ where: { projectId: id }, orderBy: { createdAt: "asc" } }),
+  ]);
 
   const openFeedback = project.feedback.filter((f: { status: string }) => f.status !== "RESOLVED");
 
@@ -180,6 +184,14 @@ export default async function ProjectDetailPage({ params }: Props) {
         </div>
 
         <div className="space-y-4">
+          <DeliveryLinksPanel
+            projectId={project.id}
+            initialLinks={deliveryLinks.map((l) => ({
+              ...l,
+              updatedAt: l.updatedAt.toISOString(),
+            }))}
+          />
+
           {clientActivity && <ClientActivityPanel activity={clientActivity} />}
 
           <div className="panel-padded space-y-3">
