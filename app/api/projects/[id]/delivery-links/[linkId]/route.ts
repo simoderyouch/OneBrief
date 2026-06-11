@@ -19,12 +19,13 @@ export async function PATCH(
   const link = await getOwnedLink(session.user.id, id, linkId);
   if (!link) return Response.json({ error: "Not found" }, { status: 404 });
 
-  const { label, url } = await req.json();
+  const { label, url, type } = await req.json();
   const updated = await prisma.deliveryLink.update({
     where: { id: linkId },
     data: {
       ...(label !== undefined && { label: label.trim() || "Download files" }),
       ...(url !== undefined && { url: url.trim() }),
+      ...(type !== undefined && { type: type === "FINAL" ? "FINAL" : "PREVIEW" }),
     },
   });
   return Response.json(updated);

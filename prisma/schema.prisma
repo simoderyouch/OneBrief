@@ -138,18 +138,27 @@ model Project {
 
 /** Shareable download / delivery links the freelancer creates per project */
 model DeliveryLink {
-  id         String   @id @default(uuid())
-  projectId  String   @map("project_id")
-  label      String   @default("Download files")
-  url        String   @db.Text
-  clickCount Int      @default(0) @map("click_count")
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @updatedAt @map("updated_at")
+  id         String           @id @default(uuid())
+  projectId  String           @map("project_id")
+  label      String           @default("Download files")
+  url        String           @db.Text
+  /** PREVIEW = always accessible · FINAL = gated behind payment */
+  type       DeliveryLinkType @default(PREVIEW)
+  clickCount Int              @default(0) @map("click_count")
+  createdAt  DateTime         @default(now()) @map("created_at")
+  updatedAt  DateTime         @updatedAt @map("updated_at")
 
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([projectId])
   @@map("delivery_links")
+}
+
+enum DeliveryLinkType {
+  PREVIEW
+  FINAL
+
+  @@map("delivery_link_type")
 }
 
 model AccessLog {

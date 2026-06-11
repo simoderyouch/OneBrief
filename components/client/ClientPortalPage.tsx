@@ -19,6 +19,7 @@ import {
   fileSecurityContext,
 } from "@/lib/file-access";
 import { canClientSeeFile } from "@/lib/file-security";
+import { isPaymentGateSatisfied } from "@/lib/payment-gate";
 
 export default async function ClientPortalPage({
   slug,
@@ -41,6 +42,7 @@ export default async function ClientPortalPage({
 
   await refreshPaymentOverdue(project.id);
   const [payments, deliveryLinks] = await Promise.all([
+
     prisma.payment.findMany({
       where: { projectId: project.id },
       orderBy: { createdAt: "asc" },
@@ -70,6 +72,16 @@ export default async function ClientPortalPage({
   const totalPaid = payments
     .filter((p) => p.status === "PAID")
     .reduce((sum, p) => sum + Number(p.amount), 0);
+
+  const paymentGatePassed = isPaymentGateSatisfied({
+    paymentGateEnabled: project.paymentGateEnabled,
+    paymentGateMode: project.paymentGateMode,
+    paymentGateMilestoneId: project.paymentGateMilestoneId,
+    payments: payments.map((p) => ({ id: p.id, status: p.status, lineKind: p.lineKind })),
+  });
+
+  const previewLinks = deliveryLinks.filter((l) => l.type === "PREVIEW");
+  const finalLinks = deliveryLinks.filter((l) => l.type === "FINAL");
 
   const allFeedback = project.feedback;
   const welcomeName = project.clientName?.trim() || undefined;
@@ -112,12 +124,13 @@ export default async function ClientPortalPage({
           </section>
         )}
 
-        {/* 3 — Download links */}
+        {/* 3 — Delivery links (preview + final) */}
         {deliveryLinks.length > 0 && (
           <section>
             <h2 className="text-lg font-semibold text-white mb-4">Download your files</h2>
             <div className="space-y-3">
-              {deliveryLinks.map((link) => (
+              {/* Preview / WIP links — always accessible */}
+              {previewLinks.map((link) => (
                 <a
                   key={link.id}
                   href={`/api/client/${slug}/${token}/delivery/${link.id}`}
@@ -129,13 +142,62 @@ export default async function ClientPortalPage({
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                       </svg>
                     </div>
-                    <span className="text-sm font-medium text-white">{link.label}</span>
+                    <div>
+                      <span className="text-sm font-medium text-white">{link.label}</span>
+                      <p className="text-[11px] text-neutral-500 mt-0.5">Preview files</p>
+                    </div>
                   </div>
                   <svg className="w-4 h-4 text-neutral-500 group-hover:text-neutral-300 transition-colors shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                   </svg>
                 </a>
               ))}
+
+              {/* Final delivery links — gated behind payment */}
+              {finalLinks.map((link) =>
+                paymentGatePassed ? (
+                  <a
+                    key={link.id}
+                    href={`/api/client/${slug}/${token}/delivery/${link.id}`}
+                    className="flex items-center justify-between gap-4 bg-neutral-900 border border-neutral-700 hover:border-amber-700/60 rounded-xl px-5 py-4 transition-colors group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-lg bg-amber-900/30 group-hover:bg-amber-900/50 flex items-center justify-center transition-colors shrink-0">
+                        <svg className="w-4 h-4 text-amber-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3l14 9-14 9V3z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <span className="text-sm font-medium text-white">{link.label}</span>
+                        <p className="text-[11px] text-amber-400/80 mt-0.5">Final delivery · unlocked</p>
+                      </div>
+                    </div>
+                    <svg className="w-4 h-4 text-neutral-500 group-hover:text-neutral-300 transition-colors shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                  </a>
+                ) : (
+                  <div
+                    key={link.id}
+                    className="flex items-center justify-between gap-4 bg-neutral-900/50 border border-neutral-800 rounded-xl px-5 py-4 opacity-70 cursor-not-allowed select-none"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-lg bg-neutral-800 flex items-center justify-center shrink-0">
+                        <svg className="w-4 h-4 text-neutral-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <span className="text-sm font-medium text-neutral-400">{link.label}</span>
+                        <p className="text-[11px] text-neutral-600 mt-0.5">Final delivery · awaiting payment</p>
+                      </div>
+                    </div>
+                    <span className="text-[11px] px-2.5 py-1 bg-neutral-800 text-neutral-500 rounded-full font-medium shrink-0">
+                      Locked
+                    </span>
+                  </div>
+                )
+              )}
             </div>
           </section>
         )}

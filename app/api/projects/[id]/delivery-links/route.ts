@@ -31,7 +31,7 @@ export async function POST(
   const project = await prisma.project.findFirst({ where: { id, userId: session.user.id } });
   if (!project) return Response.json({ error: "Not found" }, { status: 404 });
 
-  const { label, url } = await req.json();
+  const { label, url, type } = await req.json();
   if (!url || typeof url !== "string") return Response.json({ error: "URL required" }, { status: 400 });
 
   const link = await prisma.deliveryLink.create({
@@ -39,6 +39,7 @@ export async function POST(
       projectId: id,
       label: (label?.trim()) || "Download files",
       url: url.trim(),
+      type: type === "FINAL" ? "FINAL" : "PREVIEW",
     },
   });
   return Response.json(link, { status: 201 });
