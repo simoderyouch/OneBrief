@@ -46,6 +46,8 @@ export default function ProjectDetailActions({ project }: ProjectDetailActionsPr
   const [regenerating, setRegenerating] = useState(false);
   const [newClientUrl, setNewClientUrl] = useState<string | null>(null);
   const [revoking, setRevoking] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const isActive =
     project.tokenActive &&
@@ -89,6 +91,13 @@ export default function ProjectDetailActions({ project }: ProjectDetailActionsPr
       body: JSON.stringify({ tokenActive: false }),
     });
     setRevoking(false);
+    router.refresh();
+  }
+
+  async function deleteProject() {
+    setDeleting(true);
+    await fetch(`/api/projects/${project.id}`, { method: "DELETE" });
+    router.push("/dashboard");
     router.refresh();
   }
 
@@ -176,6 +185,56 @@ export default function ProjectDetailActions({ project }: ProjectDetailActionsPr
             {regenerating ? "Generating…" : "Regenerate link"}
           </button>
         </>
+      )}
+
+      {/* Delete button */}
+      <button
+        onClick={() => setConfirmDelete(true)}
+        className="flex items-center gap-1.5 px-3 py-1.5 bg-neutral-800/80 hover:bg-red-950/60 border border-neutral-700/50 hover:border-red-800 rounded-lg text-neutral-500 hover:text-red-400 text-sm font-medium transition-colors"
+        title="Delete project"
+      >
+        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+        </svg>
+        Delete
+      </button>
+
+      {/* Delete confirmation modal */}
+      {confirmDelete && (
+        <div
+          className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
+          onClick={() => setConfirmDelete(false)}
+        >
+          <div
+            className="bg-neutral-900 border border-neutral-800 rounded-2xl w-full max-w-sm p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-10 h-10 rounded-full bg-red-950/60 border border-red-800/50 flex items-center justify-center mb-4">
+              <svg className="w-5 h-5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </div>
+            <h3 className="text-white font-semibold mb-1">Delete &quot;{project.title}&quot;?</h3>
+            <p className="text-sm text-neutral-400 mb-5">
+              This will permanently delete the project and all its files, feedback, payments, and delivery links. This cannot be undone.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setConfirmDelete(false)}
+                className="flex-1 py-2 border border-neutral-700 text-neutral-300 rounded-lg text-sm font-medium hover:bg-neutral-800 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={deleteProject}
+                disabled={deleting}
+                className="flex-1 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-semibold transition-colors disabled:opacity-50"
+              >
+                {deleting ? "Deleting…" : "Yes, delete"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* New URL toast */}
