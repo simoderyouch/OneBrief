@@ -3,7 +3,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Calendar, MessageCircle } from "lucide-react";
+import { Calendar, MessageCircle, Eye } from "lucide-react";
+import type { ProjectViewSummary } from "@/lib/client-activity-utils";
+import { formatRelativeTime } from "@/lib/client-activity-utils";
 
 const STATUS_COLORS: Record<string, string> = {
   DRAFT: "bg-neutral-800 text-neutral-300",
@@ -40,7 +42,10 @@ interface ProjectCardProps {
   };
 }
 
-export default function ProjectCard({ project }: ProjectCardProps) {
+export default function ProjectCard({
+  project,
+  viewSummary,
+}: ProjectCardProps & { viewSummary?: ProjectViewSummary }) {
   const router = useRouter();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -77,7 +82,19 @@ export default function ProjectCard({ project }: ProjectCardProps) {
             </span>
           </div>
 
-          <div className="flex items-center gap-4 text-xs text-neutral-500">
+          <div className="flex items-center gap-4 text-xs text-neutral-500 flex-wrap">
+            {viewSummary && (
+              <span className="inline-flex items-center gap-1 text-neutral-400">
+                <Eye className="w-3.5 h-3.5 shrink-0" aria-hidden />
+                {viewSummary.portalViews + viewSummary.fileViews} view
+                {viewSummary.portalViews + viewSummary.fileViews !== 1 ? "s" : ""}
+                {viewSummary.lastSeenAt && (
+                  <span className="text-neutral-600">
+                    · {formatRelativeTime(viewSummary.lastSeenAt)}
+                  </span>
+                )}
+              </span>
+            )}
             {project.deadline && (
               <span className={`inline-flex items-center gap-1 ${deadlinePassed ? "text-red-400" : ""}`}>
                 <Calendar className="w-3.5 h-3.5 shrink-0" aria-hidden />

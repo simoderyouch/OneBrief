@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { serializeProjectsForClient } from "@/lib/serialize";
+import { getProjectViewSummaries } from "@/lib/client-activity";
 import { redirect } from "next/navigation";
 import ProjectCard from "@/components/dashboard/ProjectCard";
 import CreateProjectModal from "@/components/dashboard/CreateProjectModal";
@@ -20,6 +21,10 @@ export default async function DashboardPage() {
   });
 
   const clientProjects = serializeProjectsForClient(projects);
+  const viewSummaries = await getProjectViewSummaries(
+    session.user.id,
+    clientProjects.map((p) => p.id)
+  );
 
   return (
     <div className="p-8">
@@ -44,7 +49,11 @@ export default async function DashboardPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {clientProjects.map((project) => (
-            <ProjectCard key={project.id} project={project} />
+            <ProjectCard
+              key={project.id}
+              project={project}
+              viewSummary={viewSummaries.get(project.id)}
+            />
           ))}
         </div>
       )}

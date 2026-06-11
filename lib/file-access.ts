@@ -105,7 +105,7 @@ export async function streamFileResponse(params: {
     return Response.json({ error: message }, { status: 403 });
   }
 
-  if (!skipLog && tier !== "BASIC") {
+  if (!skipLog) {
     await logFileAccess({
       fileId: file.id,
       projectId: file.projectId,

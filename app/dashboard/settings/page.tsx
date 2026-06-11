@@ -21,6 +21,10 @@ export default async function SettingsPage() {
       notifyUpload: true,
       notifyStatus: true,
       whatsappDefaultCountryCode: true,
+      ribAccountHolder: true,
+      ribIban: true,
+      ribBic: true,
+      ribBankName: true,
     },
   });
 

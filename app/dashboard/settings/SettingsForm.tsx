@@ -12,6 +12,10 @@ interface SettingsFormProps {
     notifyUpload: boolean;
     notifyStatus: boolean;
     whatsappDefaultCountryCode: string;
+    ribAccountHolder: string | null;
+    ribIban: string | null;
+    ribBic: string | null;
+    ribBankName: string | null;
   };
 }
 
@@ -24,6 +28,13 @@ export default function SettingsForm({ user }: SettingsFormProps) {
   const [notifyFeedback, setNotifyFeedback] = useState(user.notifyFeedback);
   const [notifyUpload, setNotifyUpload] = useState(user.notifyUpload);
   const [notifyStatus, setNotifyStatus] = useState(user.notifyStatus);
+
+  const [ribAccountHolder, setRibAccountHolder] = useState(user.ribAccountHolder || "");
+  const [ribIban, setRibIban] = useState(user.ribIban || "");
+  const [ribBic, setRibBic] = useState(user.ribBic || "");
+  const [ribBankName, setRibBankName] = useState(user.ribBankName || "");
+  const [ribSaving, setRibSaving] = useState(false);
+  const [ribSaved, setRibSaved] = useState(false);
 
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileSaved, setProfileSaved] = useState(false);
@@ -55,6 +66,19 @@ export default function SettingsForm({ user }: SettingsFormProps) {
     await update({ name: trimmed || null });
     setProfileSaved(true);
     setTimeout(() => setProfileSaved(false), 3000);
+  }
+
+  async function saveRib() {
+    setRibSaving(true);
+    setRibSaved(false);
+    await fetch("/api/user/profile", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ribAccountHolder, ribIban, ribBic, ribBankName }),
+    });
+    setRibSaving(false);
+    setRibSaved(true);
+    setTimeout(() => setRibSaved(false), 3000);
   }
 
   async function saveNotifications() {
@@ -143,6 +167,73 @@ export default function SettingsForm({ user }: SettingsFormProps) {
             )}
           </div>
         </form>
+      </section>
+
+      {/* Bank details / RIB */}
+      <section className="bg-neutral-900 border border-neutral-800 rounded-xl p-6">
+        <h2 className="font-semibold text-white mb-1">Payment details (RIB)</h2>
+        <p className="text-xs text-neutral-500 mb-4">
+          Shown on invoices so clients know where to send payment. Never shared elsewhere.
+        </p>
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-neutral-300 mb-1">Account holder</label>
+              <input
+                value={ribAccountHolder}
+                onChange={(e) => setRibAccountHolder(e.target.value)}
+                placeholder="Your full name"
+                className="w-full px-3 py-2.5 bg-neutral-800 border border-neutral-700 rounded-lg text-white text-sm placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-neutral-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-neutral-300 mb-1">Bank name</label>
+              <input
+                value={ribBankName}
+                onChange={(e) => setRibBankName(e.target.value)}
+                placeholder="e.g. CIH Bank"
+                className="w-full px-3 py-2.5 bg-neutral-800 border border-neutral-700 rounded-lg text-white text-sm placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-neutral-500"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-neutral-300 mb-1">IBAN</label>
+            <input
+              value={ribIban}
+              onChange={(e) => setRibIban(e.target.value)}
+              placeholder="MA64 0000 0000 0000 0000 0000 000"
+              className="w-full px-3 py-2.5 bg-neutral-800 border border-neutral-700 rounded-lg text-white text-sm placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-neutral-500 font-mono tracking-wider"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-neutral-300 mb-1">BIC / SWIFT</label>
+            <input
+              value={ribBic}
+              onChange={(e) => setRibBic(e.target.value.toUpperCase())}
+              placeholder="CIHBMAMR"
+              maxLength={11}
+              className="w-full max-w-[200px] px-3 py-2.5 bg-neutral-800 border border-neutral-700 rounded-lg text-white text-sm placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-neutral-500 font-mono"
+            />
+          </div>
+        </div>
+        <div className="flex items-center gap-3 mt-4 pt-4 border-t border-neutral-800">
+          <button
+            type="button"
+            onClick={saveRib}
+            disabled={ribSaving}
+            className="px-4 py-2 bg-white text-neutral-900 font-semibold rounded-lg text-sm hover:bg-neutral-100 transition-colors disabled:opacity-50"
+          >
+            {ribSaving ? "Saving…" : "Save payment details"}
+          </button>
+          {ribSaved && (
+            <span className="text-sm text-neutral-500 flex items-center gap-1">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+              Saved
+            </span>
+          )}
+        </div>
       </section>
 
       {/* Notifications */}

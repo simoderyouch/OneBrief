@@ -84,14 +84,26 @@ async function resolvePublicProjectByStoredToken(
   const ip = getIp(headers);
   const userAgent = headers.get("user-agent") || undefined;
 
+  /** Count one portal view per IP per project per 30 minutes (avoids refresh spam). */
   if (logAccess) {
-    await prisma.accessLog.create({
-      data: {
+    const since = new Date(Date.now() - 30 * 60 * 1000);
+    const recent = await prisma.accessLog.findFirst({
+      where: {
         projectId: project.id,
         ipAddress: ip,
-        userAgent,
+        createdAt: { gte: since },
       },
+      select: { id: true },
     });
+    if (!recent) {
+      await prisma.accessLog.create({
+        data: {
+          projectId: project.id,
+          ipAddress: ip,
+          userAgent,
+        },
+      });
+    }
   }
 
   return { ok: true, project };

@@ -1,9 +1,14 @@
 import fs from "fs/promises";
 import path from "path";
 
-export const STORAGE_ROOT =
-  process.env.STORAGE_PATH ||
-  path.join(/* turbopackIgnore: true */ process.cwd(), "storage", "uploads");
+function storageRoot(): string {
+  const raw =
+    process.env.STORAGE_PATH ||
+    path.join(/* turbopackIgnore: true */ process.cwd(), "storage", "uploads");
+  return path.resolve(raw);
+}
+
+export const STORAGE_ROOT = storageRoot();
 
 export interface UploadResult {
   /** Internal storage path — stored in File.publicId */
@@ -16,8 +21,9 @@ export interface UploadResult {
 
 function resolveStoragePath(storagePath: string): string {
   const normalized = path.normalize(storagePath).replace(/^(\.\.(\/|\\|$))+/, "");
-  const full = path.join(STORAGE_ROOT, normalized);
-  if (!full.startsWith(STORAGE_ROOT)) {
+  const full = path.resolve(STORAGE_ROOT, normalized);
+  const root = path.resolve(STORAGE_ROOT);
+  if (!full.startsWith(root + path.sep) && full !== root) {
     throw new Error("Invalid storage path");
   }
   return full;

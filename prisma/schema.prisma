@@ -26,6 +26,11 @@ model User {
   /** Default country code for client WhatsApp numbers without + (e.g. 212 Morocco) */
   whatsappDefaultCountryCode String @default("212") @map("whatsapp_default_country_code")
   studioTerms    String?  @map("studio_terms") @db.Text
+  /** Bank details shown on invoices sent to clients */
+  ribAccountHolder String? @map("rib_account_holder")
+  ribIban          String? @map("rib_iban")
+  ribBic           String? @map("rib_bic")
+  ribBankName      String? @map("rib_bank_name")
   createdAt     DateTime  @default(now()) @map("created_at")
   projects      Project[]
   accounts      Account[]
@@ -112,6 +117,8 @@ model Project {
   paymentGateMode PaymentGateMode @default(DEPOSIT_PAID) @map("payment_gate_mode")
   paymentGateMilestoneId String?  @map("payment_gate_milestone_id")
   autoUnlockOnPayment Boolean    @default(true) @map("auto_unlock_on_payment")
+  /** External DocSend link shown to the client for file downloads */
+  docsendUrl      String?        @map("docsend_url")
   createdAt       DateTime       @default(now()) @map("created_at")
   updatedAt       DateTime       @updatedAt @map("updated_at")
 

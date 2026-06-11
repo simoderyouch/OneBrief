@@ -15,6 +15,8 @@ import PackageManager from "@/components/dashboard/PackageManager";
 import PaymentGateSettings from "@/components/dashboard/PaymentGateSettings";
 import NotifyWhatsApp from "@/components/dashboard/NotifyWhatsApp";
 import EditProjectModal from "@/components/dashboard/EditProjectModal";
+import ClientActivityPanel from "@/components/dashboard/ClientActivityPanel";
+import { getProjectClientActivity } from "@/lib/client-activity";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -55,6 +57,7 @@ export default async function ProjectDetailPage({ params }: Props) {
   if (!project) notFound();
 
   const clientProject = serializeProjectForClient(project);
+  const clientActivity = await getProjectClientActivity(id, userId);
 
   const openFeedback = project.feedback.filter((f: { status: string }) => f.status !== "RESOLVED");
 
@@ -90,8 +93,18 @@ export default async function ProjectDetailPage({ params }: Props) {
               totalPrice: clientProject.totalPrice,
               currency: clientProject.currency,
               internalNote: clientProject.internalNote,
+              docsendUrl: project.docsendUrl,
             }}
           />
+          <Link
+            href={`/dashboard/${project.id}/invoice`}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 rounded-lg text-neutral-300 text-sm font-medium transition-colors"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            Invoice
+          </Link>
           <ProjectDetailActions project={{
             id: project.id,
             title: project.title,
@@ -167,6 +180,8 @@ export default async function ProjectDetailPage({ params }: Props) {
         </div>
 
         <div className="space-y-4">
+          {clientActivity && <ClientActivityPanel activity={clientActivity} />}
+
           <div className="panel-padded space-y-3">
             <h3 className="text-sm font-medium text-neutral-400">Contact</h3>
             {project.serviceType && (

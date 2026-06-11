@@ -52,7 +52,8 @@ const PLACEHOLDER_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="400" hei
 
 async function writePlaceholderFile(projectId, filename) {
   const storagePath = `projects/${projectId}/${filename}`;
-  const full = path.join(process.cwd(), "storage", "uploads", storagePath);
+  const root = path.resolve(process.env.STORAGE_PATH || path.join(process.cwd(), "storage", "uploads"));
+  const full = path.resolve(root, storagePath);
   await fs.mkdir(path.dirname(full), { recursive: true });
   await fs.writeFile(full, PLACEHOLDER_SVG, "utf8");
   return storagePath;

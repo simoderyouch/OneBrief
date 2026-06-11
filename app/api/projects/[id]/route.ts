@@ -92,6 +92,7 @@ export async function PATCH(
       paymentGateMode: body.paymentGateMode,
       paymentGateMilestoneId: body.paymentGateMilestoneId,
       autoUnlockOnPayment: body.autoUnlockOnPayment,
+      docsendUrl: body.docsendUrl !== undefined ? (body.docsendUrl || null) : undefined,
     },
   });
 

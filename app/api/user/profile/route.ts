@@ -9,7 +9,7 @@ export async function PATCH(request: NextRequest) {
   }
 
   const body = await request.json();
-  const { nickname, whatsappDefaultCountryCode } = body;
+  const { nickname, whatsappDefaultCountryCode, ribAccountHolder, ribIban, ribBic, ribBankName } = body;
 
   if (whatsappDefaultCountryCode !== undefined) {
     const code = String(whatsappDefaultCountryCode).replace(/\D/g, "");
@@ -38,14 +38,24 @@ export async function PATCH(request: NextRequest) {
     return Response.json({ error: "Nickname must be 120 characters or less" }, { status: 400 });
   }
 
+  const ribData: Record<string, string | null> = {};
+  if (ribAccountHolder !== undefined) ribData.ribAccountHolder = String(ribAccountHolder).trim() || null;
+  if (ribIban !== undefined) ribData.ribIban = String(ribIban).trim().replace(/\s/g, "") || null;
+  if (ribBic !== undefined) ribData.ribBic = String(ribBic).trim().toUpperCase() || null;
+  if (ribBankName !== undefined) ribData.ribBankName = String(ribBankName).trim() || null;
+
   const updated = await prisma.user.update({
     where: { id: session.user.id },
     data: {
       nickname: trimmed || null,
-      // Keep legacy `name` in sync for exports / older reads (optional mirror).
       name: trimmed || null,
+      ...ribData,
     },
-    select: { id: true, name: true, nickname: true, email: true, whatsappDefaultCountryCode: true },
+    select: {
+      id: true, name: true, nickname: true, email: true,
+      whatsappDefaultCountryCode: true,
+      ribAccountHolder: true, ribIban: true, ribBic: true, ribBankName: true,
+    },
   });
 
   return Response.json(updated);

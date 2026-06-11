@@ -28,6 +28,7 @@ interface Project {
   totalPrice: unknown;
   currency: string;
   internalNote: string | null;
+  docsendUrl: string | null;
 }
 
 interface EditProjectModalProps {
@@ -51,6 +52,7 @@ export default function EditProjectModal({ project }: EditProjectModalProps) {
     totalPrice: project.totalPrice != null ? String(Number(project.totalPrice)) : "",
     currency: project.currency,
     internalNote: project.internalNote || "",
+    docsendUrl: project.docsendUrl || "",
   });
 
   function handleChange(
@@ -227,6 +229,19 @@ export default function EditProjectModal({ project }: EditProjectModalProps) {
                   onChange={handleChange}
                   className="w-full px-3 py-2 bg-neutral-800 border border-neutral-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500"
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-neutral-300 mb-1">DocSend link</label>
+                <input
+                  name="docsendUrl"
+                  type="url"
+                  value={form.docsendUrl}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 bg-neutral-800 border border-neutral-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500"
+                  placeholder="https://docsend.com/view/..."
+                />
+                <p className="text-xs text-neutral-500 mt-1">Shown to your client as a download button in the portal.</p>
               </div>
 
               <div>
