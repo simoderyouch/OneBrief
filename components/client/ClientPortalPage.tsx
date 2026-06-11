@@ -51,12 +51,12 @@ export default async function ClientPortalPage({
     }),
   ]);
 
-  // Hide payment at the very first stage (brief/concepts) — show from refinement onward,
-  // and always show once the project is in a late status.
+  // Show payment block if there's a total price OR milestones, except at very first stages.
   const HIDE_STAGES = ["BRIEF", "CONCEPTS"];
   const FORCE_SHOW_STATUSES = ["IN_REVISION", "WAITING_FEEDBACK", "DELIVERED", "COMPLETED", "APPROVAL_PENDING"];
+  const hasPaymentData = payments.length > 0 || !!project.totalPrice;
   const showPayments =
-    payments.length > 0 &&
+    hasPaymentData &&
     (FORCE_SHOW_STATUSES.includes(project.status) ||
       !HIDE_STAGES.includes(project.stage));
 
