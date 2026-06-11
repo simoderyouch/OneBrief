@@ -9,52 +9,58 @@ export async function PATCH(request: NextRequest) {
   }
 
   const body = await request.json();
-  const { nickname, whatsappDefaultCountryCode, ribAccountHolder, ribIban, ribBic, ribBankName } = body;
+  const {
+    nickname,
+    whatsappDefaultCountryCode,
+    ribAccountHolder,
+    ribIban,
+    ribBic,
+    ribBankName,
+  } = body;
+
+  const data: Record<string, string | null> = {};
+
+  // Profile fields
+  if (typeof nickname === "string") {
+    const trimmed = nickname.trim();
+    if (trimmed.length > 120) {
+      return Response.json({ error: "Nickname must be 120 characters or less" }, { status: 400 });
+    }
+    data.nickname = trimmed || null;
+    data.name = trimmed || null;
+  }
 
   if (whatsappDefaultCountryCode !== undefined) {
     const code = String(whatsappDefaultCountryCode).replace(/\D/g, "");
     if (code.length < 1 || code.length > 4) {
       return Response.json({ error: "Country code must be 1–4 digits" }, { status: 400 });
     }
-    await prisma.user.update({
-      where: { id: session.user.id },
-      data: { whatsappDefaultCountryCode: code },
-    });
+    data.whatsappDefaultCountryCode = code;
   }
 
-  if (typeof nickname !== "string") {
-    if (whatsappDefaultCountryCode !== undefined) {
-      const updated = await prisma.user.findUnique({
-        where: { id: session.user.id },
-        select: { id: true, name: true, nickname: true, email: true, whatsappDefaultCountryCode: true },
-      });
-      return Response.json(updated);
-    }
-    return Response.json({ error: "Nickname must be a string" }, { status: 400 });
-  }
+  // RIB / bank details
+  if (ribAccountHolder !== undefined) data.ribAccountHolder = String(ribAccountHolder).trim() || null;
+  if (ribIban !== undefined) data.ribIban = String(ribIban).trim().replace(/\s/g, "") || null;
+  if (ribBic !== undefined) data.ribBic = String(ribBic).trim().toUpperCase() || null;
+  if (ribBankName !== undefined) data.ribBankName = String(ribBankName).trim() || null;
 
-  const trimmed = nickname.trim();
-  if (trimmed.length > 120) {
-    return Response.json({ error: "Nickname must be 120 characters or less" }, { status: 400 });
+  if (Object.keys(data).length === 0) {
+    return Response.json({ error: "Nothing to update" }, { status: 400 });
   }
-
-  const ribData: Record<string, string | null> = {};
-  if (ribAccountHolder !== undefined) ribData.ribAccountHolder = String(ribAccountHolder).trim() || null;
-  if (ribIban !== undefined) ribData.ribIban = String(ribIban).trim().replace(/\s/g, "") || null;
-  if (ribBic !== undefined) ribData.ribBic = String(ribBic).trim().toUpperCase() || null;
-  if (ribBankName !== undefined) ribData.ribBankName = String(ribBankName).trim() || null;
 
   const updated = await prisma.user.update({
     where: { id: session.user.id },
-    data: {
-      nickname: trimmed || null,
-      name: trimmed || null,
-      ...ribData,
-    },
+    data,
     select: {
-      id: true, name: true, nickname: true, email: true,
+      id: true,
+      name: true,
+      nickname: true,
+      email: true,
       whatsappDefaultCountryCode: true,
-      ribAccountHolder: true, ribIban: true, ribBic: true, ribBankName: true,
+      ribAccountHolder: true,
+      ribIban: true,
+      ribBic: true,
+      ribBankName: true,
     },
   });
 
