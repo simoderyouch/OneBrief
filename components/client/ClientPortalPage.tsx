@@ -51,12 +51,14 @@ export default async function ClientPortalPage({
     }),
   ]);
 
-  // Show payment summary once project reaches later stages
-  const PAYMENT_STAGES = ["FINALS", "DELIVERY"];
-  const PAYMENT_STATUSES = ["IN_REVISION", "DELIVERED", "COMPLETED", "WAITING_FEEDBACK"];
+  // Hide payment at the very first stage (brief/concepts) — show from refinement onward,
+  // and always show once the project is in a late status.
+  const HIDE_STAGES = ["BRIEF", "CONCEPTS"];
+  const FORCE_SHOW_STATUSES = ["IN_REVISION", "WAITING_FEEDBACK", "DELIVERED", "COMPLETED", "APPROVAL_PENDING"];
   const showPayments =
-    PAYMENT_STAGES.includes(project.stage) ||
-    PAYMENT_STATUSES.includes(project.status);
+    payments.length > 0 &&
+    (FORCE_SHOW_STATUSES.includes(project.status) ||
+      !HIDE_STAGES.includes(project.stage));
 
   const currentFiles = project.files.filter(
     (f) =>
@@ -174,12 +176,16 @@ export default async function ClientPortalPage({
           </section>
         )}
 
-        {/* Payment summary — shown at later stages only */}
-        {showPayments && payments.length > 0 && (
+        {/* Payment summary */}
+        {showPayments && (
           <section>
             <h2 className="text-lg font-semibold text-white mb-4">Payment summary</h2>
             <PaymentSummary
-              total={Number(project.totalPrice ?? 0)}
+              total={
+                project.totalPrice
+                  ? Number(project.totalPrice)
+                  : payments.reduce((s, p) => s + Number(p.amount), 0)
+              }
               paid={totalPaid}
               currency={project.currency}
               payments={payments.map((p) => ({
